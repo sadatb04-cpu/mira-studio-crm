@@ -5,12 +5,14 @@ import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { Header } from "@/components/layout/header";
 import { Sidebar } from "@/components/layout/sidebar";
+import type { Profile } from "@/types/profile";
 
 interface AppShellProps {
   children: React.ReactNode;
+  profile: Profile | null;
 }
 
-export function AppShell({ children }: AppShellProps) {
+export function AppShell({ children, profile }: AppShellProps) {
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
 
   return (
@@ -33,7 +35,7 @@ export function AppShell({ children }: AppShellProps) {
       )}
 
       <div className={cn("flex min-h-full flex-1 flex-col")}>
-        <Header onMenuClick={() => setIsMobileNavOpen((open) => !open)} />
+        <Header onMenuClick={() => setIsMobileNavOpen((open) => !open)} profile={profile} />
         <main className="flex flex-1 flex-col overflow-y-auto bg-background">{children}</main>
       </div>
     </div>

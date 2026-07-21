@@ -27,6 +27,17 @@ This project uses [Supabase](https://supabase.com) for its backend. Copy `.env.e
 
 These are exposed to the browser (`NEXT_PUBLIC_` prefix) intentionally — they are safe to expose alongside Supabase's Row Level Security policies. Never commit real values; `.env.local` is gitignored.
 
+## Database Setup
+
+SQL migrations live in `supabase/migrations/`. Apply `0001_create_profiles.sql` to your Supabase project (via the SQL Editor in the Supabase dashboard, or `supabase db push` if you use the Supabase CLI) before using authentication — it creates the `profiles` table, its enums, and Row Level Security policies that the app relies on.
+
+## Authentication
+
+Email/password auth is handled via Supabase Auth:
+
+- `/login` and `/signup` are public; every other route requires a session (enforced by `src/proxy.ts` and, as a stronger check, in `src/app/(app)/layout.tsx`).
+- A `profiles` row is created automatically for a user on their first successful sign-in, if one doesn't already exist (see `src/lib/supabase/profile.ts`).
+
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.

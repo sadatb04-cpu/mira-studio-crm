@@ -12,7 +12,9 @@ import {
   LucideIcon,
 } from "lucide-react";
 
-export type UserRole = "admin" | "manager" | "artisan" | "staff";
+import type { UserRole } from "@/types/profile";
+
+export type { UserRole };
 
 export interface NavigationItem {
   id: string;
