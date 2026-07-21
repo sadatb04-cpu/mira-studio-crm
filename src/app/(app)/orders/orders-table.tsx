@@ -1,5 +1,9 @@
+"use client"
+
 import { ShoppingBag } from "lucide-react"
 import { format } from "date-fns"
+import Link from "next/link"
+import { useRouter } from "next/navigation"
 
 import { SectionCard } from "@/components/shared/section-card"
 import { StatusBadge } from "@/components/shared/status-badge"
@@ -31,6 +35,8 @@ interface OrdersTableProps {
 }
 
 export function OrdersTable({ orders }: OrdersTableProps) {
+  const router = useRouter()
+
   if (orders.length === 0) {
     return (
       <SectionCard>
@@ -59,8 +65,20 @@ export function OrdersTable({ orders }: OrdersTableProps) {
         </thead>
         <tbody>
           {orders.map((order) => (
-            <tr key={order.id} className="border-b border-border last:border-0">
-              <td className="px-4 py-2.5 font-medium text-foreground">{order.order_number}</td>
+            <tr
+              key={order.id}
+              onClick={() => router.push(`/orders/${order.id}`)}
+              className="cursor-pointer border-b border-border last:border-0 hover:bg-muted/50"
+            >
+              <td className="px-4 py-2.5 font-medium text-foreground">
+                <Link
+                  href={`/orders/${order.id}`}
+                  onClick={(event) => event.stopPropagation()}
+                  className="hover:underline"
+                >
+                  {order.order_number}
+                </Link>
+              </td>
               <td className="px-4 py-2.5 text-foreground">{order.customer?.full_name ?? "—"}</td>
               <td className="px-4 py-2.5">
                 <StatusBadge label={ORDER_STATUS_LABELS[order.status]} tone={STATUS_TONE[order.status]} />

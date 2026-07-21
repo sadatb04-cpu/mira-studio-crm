@@ -1,7 +1,9 @@
-import { ShoppingBag } from "lucide-react"
+import { Plus, ShoppingBag } from "lucide-react"
+import Link from "next/link"
 
 import { PageHeader } from "@/components/shared/page-header"
 import { StatCard } from "@/components/shared/stat-card"
+import { Button } from "@/components/ui/button"
 import { createClient } from "@/lib/supabase/server"
 import { getOrders, getOrderStatusCounts } from "@/lib/supabase/orders"
 import { OrdersFilters } from "@/app/(app)/orders/orders-filters"
@@ -28,7 +30,18 @@ export default async function OrdersPage({ searchParams }: OrdersPageProps) {
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-6">
-      <PageHeader title="Orders" description="Manage orders, bespoke commissions, and transactions." />
+      <PageHeader
+        title="Orders"
+        description="Manage orders, bespoke commissions, and transactions."
+        actions={
+          <Button asChild size="sm">
+            <Link href="/orders/new">
+              <Plus className="size-3.5" data-icon="inline-start" />
+              New Order
+            </Link>
+          </Button>
+        }
+      />
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
         <StatCard label="Total Orders" value={totalOrders} icon={ShoppingBag} />
