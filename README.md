@@ -16,6 +16,17 @@ bun dev
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
+## Environment Variables
+
+This project uses [Supabase](https://supabase.com) for its backend. Copy `.env.example` to `.env.local` and fill in your project's values:
+
+| Variable | Description |
+| --- | --- |
+| `NEXT_PUBLIC_SUPABASE_URL` | The URL of your Supabase project (Project Settings → API). |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | The public anon/publishable key for your Supabase project (Project Settings → API). |
+
+These are exposed to the browser (`NEXT_PUBLIC_` prefix) intentionally — they are safe to expose alongside Supabase's Row Level Security policies. Never commit real values; `.env.local` is gitignored.
+
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
