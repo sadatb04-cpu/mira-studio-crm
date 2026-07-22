@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation"
 import { format } from "date-fns"
+import Link from "next/link"
 
 import { cn } from "@/lib/utils"
 import { PageHeader } from "@/components/shared/page-header"
@@ -9,6 +10,8 @@ import type { StatusTone } from "@/components/shared/status-badge"
 import { EmptyState } from "@/components/shared/empty-state"
 import { createClient } from "@/lib/supabase/server"
 import { getOrderById } from "@/lib/supabase/orders"
+import { getProductionJobsForOrder } from "@/lib/supabase/production"
+import { ReleaseToProductionButton } from "@/app/(app)/orders/[id]/release-to-production-button"
 import { ORDER_STATUS_LABELS } from "@/types/order"
 import type { OrderItemDetail, OrderStatus } from "@/types/order"
 
@@ -63,6 +66,9 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
   if (!order) {
     notFound()
   }
+
+  const orderId = order.id
+  const productionJobs = await getProductionJobsForOrder(supabase, orderId)
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-6">
@@ -146,9 +152,19 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
         </SectionCard>
 
         <SectionCard title="Production">
-          <p className="text-sm text-muted-foreground">
-            Production will begin once this order is released.
-          </p>
+          {productionJobs.length > 0 ? (
+            <ul className="flex flex-col gap-2">
+              {productionJobs.map((job) => (
+                <li key={job.id}>
+                  <Link href={`/production/${job.id}`} className="text-sm text-primary hover:underline">
+                    {job.job_number}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <ReleaseToProductionButton orderId={orderId} />
+          )}
         </SectionCard>
       </div>
     </div>
