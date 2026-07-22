@@ -14,6 +14,8 @@ import type { Json } from "@/types/database"
 interface GetOrdersFilters {
   status?: OrderStatus
   search?: string
+  /** Due date has passed and the order hasn't been delivered or cancelled. */
+  overdue?: boolean
 }
 
 const ORDER_COLUMNS =
@@ -41,6 +43,12 @@ export async function getOrders(supabase: SupabaseClient, filters: GetOrdersFilt
       byCustomer = byCustomer.eq("status", filters.status)
     }
 
+    if (filters.overdue) {
+      const today = new Date().toISOString().slice(0, 10)
+      byNumber = byNumber.lt("due_date", today).not("status", "in", "(delivered,cancelled)")
+      byCustomer = byCustomer.lt("due_date", today).not("status", "in", "(delivered,cancelled)")
+    }
+
     const [numberResult, customerResult] = await Promise.all([byNumber, byCustomer])
     if (numberResult.error) throw numberResult.error
     if (customerResult.error) throw customerResult.error
@@ -62,6 +70,11 @@ export async function getOrders(supabase: SupabaseClient, filters: GetOrdersFilt
 
   if (filters.status) {
     query = query.eq("status", filters.status)
+  }
+
+  if (filters.overdue) {
+    const today = new Date().toISOString().slice(0, 10)
+    query = query.lt("due_date", today).not("status", "in", "(delivered,cancelled)")
   }
 
   const { data, error } = await query

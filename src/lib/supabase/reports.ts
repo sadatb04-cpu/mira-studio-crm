@@ -1,0 +1,377 @@
+import type { SupabaseClient } from "@supabase/supabase-js"
+
+import { getInventoryStats } from "@/lib/supabase/inventory"
+import { getCustomersDashboardStats } from "@/lib/supabase/customers"
+import { getEmployeeDashboardStats } from "@/lib/supabase/employees"
+import { ORDER_STATUSES } from "@/types/order"
+import { PRODUCTION_JOB_STATUSES } from "@/types/production"
+import { INVENTORY_CATEGORIES } from "@/types/inventory"
+import { TASK_STATUSES } from "@/types/task"
+import type {
+  ActivityItem,
+  CustomerGrowthPoint,
+  DashboardStats,
+  DateRangePreset,
+  EmployeeWorkload,
+  InventoryByCategory,
+  OrdersByStatus,
+  ProductionByStatus,
+  ReportDateRange,
+  RevenuePoint,
+  TaskCompletionPoint,
+  TrendKpi,
+} from "@/types/report"
+
+function toDateString(date: Date): string {
+  return date.toISOString().slice(0, 10)
+}
+
+/** Resolves a preset (or custom from/to) into a concrete date range. */
+export function resolveDateRange(preset: DateRangePreset, customFrom?: string, customTo?: string): ReportDateRange {
+  const today = new Date()
+  const to = customTo ?? toDateString(today)
+
+  if (preset === "custom") {
+    return { from: customFrom ?? to, to }
+  }
+
+  if (preset === "today") {
+    return { from: to, to }
+  }
+
+  if (preset === "year") {
+    return { from: `${today.getFullYear()}-01-01`, to }
+  }
+
+  const days = preset === "7d" ? 7 : preset === "30d" ? 30 : 90
+  const from = new Date(today)
+  from.setDate(from.getDate() - days)
+
+  return { from: toDateString(from), to }
+}
+
+/** Same-length period immediately preceding `range`, for comparison KPIs. */
+export function getPreviousRange(range: ReportDateRange): ReportDateRange {
+  const from = new Date(range.from)
+  const to = new Date(range.to)
+  const durationMs = to.getTime() - from.getTime()
+
+  const previousTo = new Date(from.getTime() - 86400000)
+  const previousFrom = new Date(previousTo.getTime() - durationMs)
+
+  return {
+    from: previousFrom.toISOString().slice(0, 10),
+    to: previousTo.toISOString().slice(0, 10),
+  }
+}
+
+function buildTrendKpi(current: number, previous: number): TrendKpi {
+  return {
+    value: current,
+    previousValue: previous,
+    changePercent: previous > 0 ? ((current - previous) / previous) * 100 : null,
+  }
+}
+
+export async function getDashboardStats(supabase: SupabaseClient, range: ReportDateRange): Promise<DashboardStats> {
+  const previous = getPreviousRange(range)
+
+  const [
+    revenueCurrentResult,
+    revenuePreviousResult,
+    deliveredResult,
+    productionCurrentResult,
+    productionPreviousResult,
+    inventoryStats,
+    customerStats,
+    employeeStats,
+    taskStatusResult,
+  ] = await Promise.all([
+    supabase.from("orders").select("total").gte("order_date", range.from).lte("order_date", range.to),
+    supabase.from("orders").select("total").gte("order_date", previous.from).lte("order_date", previous.to),
+    // Snapshot, not date-ranged - orders has no delivered_at column, so this
+    // intentionally reflects current state rather than approximating via
+    // updated_at (which changes on any edit, not just delivery).
+    supabase.from("orders").select("id").eq("status", "delivered"),
+    supabase.from("production_jobs").select("id").gte("created_at", range.from).lte("created_at", range.to),
+    supabase.from("production_jobs").select("id").gte("created_at", previous.from).lte("created_at", previous.to),
+    getInventoryStats(supabase),
+    getCustomersDashboardStats(supabase),
+    getEmployeeDashboardStats(supabase),
+    supabase.from("tasks").select("status"),
+  ])
+
+  if (revenueCurrentResult.error) throw revenueCurrentResult.error
+  if (revenuePreviousResult.error) throw revenuePreviousResult.error
+  if (deliveredResult.error) throw deliveredResult.error
+  if (productionCurrentResult.error) throw productionCurrentResult.error
+  if (productionPreviousResult.error) throw productionPreviousResult.error
+  if (taskStatusResult.error) throw taskStatusResult.error
+
+  const revenueCurrent = (revenueCurrentResult.data ?? []).reduce((sum, row) => sum + row.total, 0)
+  const revenuePrevious = (revenuePreviousResult.data ?? []).reduce((sum, row) => sum + row.total, 0)
+
+  const openTasksCount = (taskStatusResult.data ?? []).filter(
+    (row) => row.status === "todo" || row.status === "in_progress" || row.status === "blocked"
+  ).length
+
+  return {
+    totalRevenue: buildTrendKpi(revenueCurrent, revenuePrevious),
+    ordersCreated: buildTrendKpi(revenueCurrentResult.data?.length ?? 0, revenuePreviousResult.data?.length ?? 0),
+    ordersDelivered: { value: deliveredResult.data?.length ?? 0 },
+    productionJobs: buildTrendKpi(
+      productionCurrentResult.data?.length ?? 0,
+      productionPreviousResult.data?.length ?? 0
+    ),
+    inventoryValue: { value: inventoryStats.totalValue },
+    activeCustomers: { value: customerStats.activeCustomers },
+    activeEmployees: { value: employeeStats.active },
+    openTasks: { value: openTasksCount },
+  }
+}
+
+export async function getRevenueTrend(supabase: SupabaseClient, range: ReportDateRange): Promise<RevenuePoint[]> {
+  const { data, error } = await supabase
+    .from("orders")
+    .select("order_date, total")
+    .gte("order_date", range.from)
+    .lte("order_date", range.to)
+    .order("order_date", { ascending: true })
+
+  if (error) throw error
+
+  const byDate = new Map<string, number>()
+  for (const row of data ?? []) {
+    byDate.set(row.order_date, (byDate.get(row.order_date) ?? 0) + row.total)
+  }
+
+  return Array.from(byDate.entries())
+    .map(([date, total]) => ({ date, total }))
+    .sort((a, b) => a.date.localeCompare(b.date))
+}
+
+export async function getOrdersByStatus(supabase: SupabaseClient, range: ReportDateRange): Promise<OrdersByStatus[]> {
+  const { data, error } = await supabase
+    .from("orders")
+    .select("status")
+    .gte("order_date", range.from)
+    .lte("order_date", range.to)
+
+  if (error) throw error
+
+  const rows = data ?? []
+  return ORDER_STATUSES.map((status) => ({
+    status,
+    count: rows.filter((row) => row.status === status).length,
+  }))
+}
+
+export async function getProductionByStatus(
+  supabase: SupabaseClient,
+  range: ReportDateRange
+): Promise<ProductionByStatus[]> {
+  const { data, error } = await supabase
+    .from("production_jobs")
+    .select("status")
+    .gte("created_at", range.from)
+    .lte("created_at", range.to)
+
+  if (error) throw error
+
+  const rows = data ?? []
+  return PRODUCTION_JOB_STATUSES.map((status) => ({
+    status,
+    count: rows.filter((row) => row.status === status).length,
+  }))
+}
+
+// Snapshot, not date-ranged - current stock composition, not a historical trend.
+export async function getInventoryByCategory(supabase: SupabaseClient): Promise<InventoryByCategory[]> {
+  const { data, error } = await supabase
+    .from("inventory_items")
+    .select("category, quantity_on_hand, unit_cost")
+    .eq("is_active", true)
+
+  if (error) throw error
+
+  const byCategory = new Map<string, number>()
+  for (const row of data ?? []) {
+    byCategory.set(row.category, (byCategory.get(row.category) ?? 0) + row.quantity_on_hand * row.unit_cost)
+  }
+
+  return INVENTORY_CATEGORIES.map((category) => ({ category, value: byCategory.get(category) ?? 0 }))
+}
+
+export async function getCustomerGrowth(
+  supabase: SupabaseClient,
+  range: ReportDateRange
+): Promise<CustomerGrowthPoint[]> {
+  const { data, error } = await supabase
+    .from("customers")
+    .select("created_at")
+    .gte("created_at", range.from)
+    .lte("created_at", range.to)
+
+  if (error) throw error
+
+  const byDate = new Map<string, number>()
+  for (const row of data ?? []) {
+    const date = (row.created_at as string).slice(0, 10)
+    byDate.set(date, (byDate.get(date) ?? 0) + 1)
+  }
+
+  return Array.from(byDate.entries())
+    .map(([date, count]) => ({ date, count }))
+    .sort((a, b) => a.date.localeCompare(b.date))
+}
+
+export async function getTaskCompletion(
+  supabase: SupabaseClient,
+  range: ReportDateRange
+): Promise<TaskCompletionPoint[]> {
+  const { data, error } = await supabase
+    .from("tasks")
+    .select("status")
+    .gte("created_at", range.from)
+    .lte("created_at", range.to)
+
+  if (error) throw error
+
+  const rows = data ?? []
+  return TASK_STATUSES.map((status) => ({
+    status,
+    count: rows.filter((row) => row.status === status).length,
+  }))
+}
+
+// Snapshot, not date-ranged - current workload, org-wide (a new aggregate;
+// employees.ts only computes this per-employee, not across all employees).
+export async function getEmployeeWorkload(supabase: SupabaseClient): Promise<EmployeeWorkload[]> {
+  const [employeesResult, jobsResult, tasksResult] = await Promise.all([
+    supabase.from("employees").select("id, profile:profiles!inner(full_name)").eq("employment_status", "active"),
+    supabase.from("production_jobs").select("assigned_to").not("assigned_to", "is", null),
+    supabase.from("tasks").select("assigned_to").not("assigned_to", "is", null),
+  ])
+
+  if (employeesResult.error) throw employeesResult.error
+  if (jobsResult.error) throw jobsResult.error
+  if (tasksResult.error) throw tasksResult.error
+
+  const jobCounts = new Map<string, number>()
+  for (const row of jobsResult.data ?? []) {
+    const key = row.assigned_to as string
+    jobCounts.set(key, (jobCounts.get(key) ?? 0) + 1)
+  }
+
+  const taskCounts = new Map<string, number>()
+  for (const row of tasksResult.data ?? []) {
+    const key = row.assigned_to as string
+    taskCounts.set(key, (taskCounts.get(key) ?? 0) + 1)
+  }
+
+  return (employeesResult.data ?? [])
+    .map((employee) => {
+      const profile = employee.profile as unknown as { full_name: string }
+      const id = employee.id as string
+      return {
+        employeeId: id,
+        name: profile.full_name,
+        jobCount: jobCounts.get(id) ?? 0,
+        taskCount: taskCounts.get(id) ?? 0,
+      }
+    })
+    .sort((a, b) => b.jobCount + b.taskCount - (a.jobCount + a.taskCount))
+}
+
+const ACTIVITY_ENTITY_LABEL_QUERIES: Record<string, { table: string; idColumn: string; labelColumn: string }> = {
+  order: { table: "orders", idColumn: "id", labelColumn: "order_number" },
+  production_job: { table: "production_jobs", idColumn: "id", labelColumn: "job_number" },
+  task: { table: "tasks", idColumn: "id", labelColumn: "title" },
+  customer: { table: "customers", idColumn: "id", labelColumn: "full_name" },
+  employee: { table: "profiles", idColumn: "id", labelColumn: "full_name" },
+}
+
+export async function getRecentActivity(supabase: SupabaseClient, limit = 20): Promise<ActivityItem[]> {
+  const { data, error } = await supabase
+    .from("activity_logs")
+    .select("id, entity_type, entity_id, action, description, created_at, actor_id")
+    .order("created_at", { ascending: false })
+    .limit(limit)
+
+  if (error) throw error
+
+  const rows = data ?? []
+
+  const actorIds = [...new Set(rows.filter((row) => row.actor_id).map((row) => row.actor_id as string))]
+  const actorsResult =
+    actorIds.length > 0
+      ? await supabase.from("profiles").select("id, full_name").in("id", actorIds)
+      : { data: [] as { id: string; full_name: string }[], error: null }
+
+  if (actorsResult.error) throw actorsResult.error
+  const actorMap = new Map((actorsResult.data ?? []).map((actor) => [actor.id, actor.full_name]))
+
+  const idsByType = new Map<string, string[]>()
+  for (const row of rows) {
+    if (!row.entity_id) continue
+    const list = idsByType.get(row.entity_type) ?? []
+    list.push(row.entity_id)
+    idsByType.set(row.entity_type, list)
+  }
+
+  const labelMap = new Map<string, string>()
+
+  await Promise.all(
+    Array.from(idsByType.entries()).map(async ([entityType, ids]) => {
+      const config = ACTIVITY_ENTITY_LABEL_QUERIES[entityType]
+      if (!config) return
+
+      const uniqueIds = [...new Set(ids)]
+      const { data: labelRows, error: labelError } = await supabase
+        .from(config.table)
+        .select(`${config.idColumn}, ${config.labelColumn}`)
+        .in(config.idColumn, uniqueIds)
+
+      if (labelError) throw labelError
+
+      for (const row of labelRows ?? []) {
+        const rowRecord = row as unknown as Record<string, string>
+        labelMap.set(`${entityType}:${rowRecord[config.idColumn]}`, rowRecord[config.labelColumn])
+      }
+    })
+  )
+
+  return rows.map((row) => ({
+    id: row.id as string,
+    action: row.action as string,
+    description: row.description as string | null,
+    created_at: row.created_at as string,
+    entityType: row.entity_type as string,
+    entityLabel: row.entity_id ? (labelMap.get(`${row.entity_type}:${row.entity_id}`) ?? row.entity_id) : null,
+    actorName: row.actor_id ? (actorMap.get(row.actor_id as string) ?? null) : null,
+  }))
+}
+
+export async function exportReportCsv(supabase: SupabaseClient, range: ReportDateRange): Promise<string> {
+  // Reuses getDashboardStats() entirely rather than re-deriving the same
+  // aggregates - the CSV is a formatted view of the same numbers shown on
+  // screen for this date range.
+  const stats = await getDashboardStats(supabase, range)
+
+  const lines = [
+    "Mira Operations - Report Export",
+    `Date Range,${range.from} to ${range.to}`,
+    "",
+    "Metric,Value",
+    `Total Revenue,${stats.totalRevenue.value}`,
+    `Orders Created,${stats.ordersCreated.value}`,
+    `Orders Delivered (current),${stats.ordersDelivered.value}`,
+    `Production Jobs,${stats.productionJobs.value}`,
+    `Inventory Value (current),${stats.inventoryValue.value}`,
+    `Active Customers (current),${stats.activeCustomers.value}`,
+    `Active Employees (current),${stats.activeEmployees.value}`,
+    `Open Tasks (current),${stats.openTasks.value}`,
+  ]
+
+  return lines.join("\n")
+}
