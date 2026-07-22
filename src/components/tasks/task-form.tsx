@@ -21,13 +21,15 @@ type TaskFormProps = {
   employees: EmployeeOption[]
   orders: OrderOption[]
   productionJobs: ProductionJobOption[]
+  /** Settings > Business Rules "Default Task Priority" - only meaningful in create mode. */
+  defaultPriority?: TaskPriority
 } & ({ mode: "create"; task?: undefined } | { mode: "edit"; task: TaskDetail })
 
-export function TaskForm({ mode, task, employees, orders, productionJobs }: TaskFormProps) {
+export function TaskForm({ mode, task, employees, orders, productionJobs, defaultPriority }: TaskFormProps) {
   const [step, setStep] = useState(0)
   const [title, setTitle] = useState(task?.title ?? "")
   const [description, setDescription] = useState(task?.description ?? "")
-  const [priority, setPriority] = useState<TaskPriority>(task?.priority ?? "medium")
+  const [priority, setPriority] = useState<TaskPriority>(task?.priority ?? defaultPriority ?? "medium")
   const [status, setStatus] = useState<TaskStatus>(task?.status ?? "todo")
   const [dueDate, setDueDate] = useState(task?.due_date ?? "")
   const [assignedTo, setAssignedTo] = useState(task?.assigned_employee?.id ?? "")

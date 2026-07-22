@@ -16,6 +16,7 @@ import { RecentActivity } from "@/components/reports/recent-activity"
 import { createClient } from "@/lib/supabase/server"
 import { getExecutiveDashboard } from "@/lib/supabase/dashboard"
 import { resolveDateRange } from "@/lib/supabase/reports"
+import { getSettingsBundle } from "@/lib/supabase/settings"
 import { DASHBOARD_DATE_RANGE_PRESETS } from "@/types/report"
 import type { DateRangePreset } from "@/types/report"
 
@@ -25,12 +26,21 @@ interface DashboardPageProps {
 
 export default async function DashboardPage({ searchParams }: DashboardPageProps) {
   const { preset: presetParam, from: fromParam, to: toParam } = await searchParams
-  const preset = (
-    DASHBOARD_DATE_RANGE_PRESETS.includes(presetParam as DateRangePreset) ? presetParam : "30d"
-  ) as DateRangePreset
-  const range = resolveDateRange(preset, fromParam, toParam)
-
   const supabase = await createClient()
+
+  // Falls back to the org's configured "Default Dashboard Range" (Settings
+  // > User Preferences) only when no explicit preset is in the URL - a
+  // non-admin session can't read that setting (RLS), so it silently
+  // resolves to the same "30d" default as before for those users.
+  let preset: DateRangePreset
+  if (DASHBOARD_DATE_RANGE_PRESETS.includes(presetParam as DateRangePreset)) {
+    preset = presetParam as DateRangePreset
+  } else {
+    const settings = await getSettingsBundle(supabase)
+    preset = settings.userPreferences.defaultDashboardRange
+  }
+
+  const range = resolveDateRange(preset, fromParam, toParam)
   const dashboard = await getExecutiveDashboard(supabase, range)
 
   return (

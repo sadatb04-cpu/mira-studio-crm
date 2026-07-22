@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js"
 
+import { getSettingsBundle } from "@/lib/supabase/settings"
 import { STAGE_SEQUENCE } from "@/types/production"
 import type {
   EmployeeOption,
@@ -175,6 +176,12 @@ export async function createProductionJob(supabase: SupabaseClient, orderId: str
 
   const itemIds = items.map((item) => item.id as string)
 
+  // Falls back to the schema's own column default ("normal") when the
+  // caller's session can't read the settings table (RLS restricts it to
+  // admins) - same behavior as before this setting existed.
+  const settings = await getSettingsBundle(supabase)
+  const defaultPriority = settings.businessRules.defaultProductionPriority
+
   const { data: existingJobs, error: existingError } = await supabase
     .from("production_jobs")
     .select("id, order_item_id")
@@ -194,7 +201,7 @@ export async function createProductionJob(supabase: SupabaseClient, orderId: str
 
     const { data: job, error: jobError } = await supabase
       .from("production_jobs")
-      .insert({ order_item_id: itemId })
+      .insert({ order_item_id: itemId, priority: defaultPriority })
       .select("id")
       .single()
 

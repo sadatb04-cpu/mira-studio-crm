@@ -18,7 +18,7 @@ export function AppShell({ children, profile }: AppShellProps) {
   return (
     <div className="flex min-h-full flex-1">
       <aside className="hidden lg:block lg:w-64 lg:shrink-0 lg:border-r lg:border-sidebar-border">
-        <Sidebar />
+        <Sidebar role={profile?.role} />
       </aside>
 
       {isMobileNavOpen && (
@@ -29,7 +29,7 @@ export function AppShell({ children, profile }: AppShellProps) {
             aria-hidden="true"
           />
           <div className="relative z-50 h-full w-64 border-r border-sidebar-border">
-            <Sidebar onNavigate={() => setIsMobileNavOpen(false)} />
+            <Sidebar role={profile?.role} onNavigate={() => setIsMobileNavOpen(false)} />
           </div>
         </div>
       )}

@@ -111,5 +111,6 @@ export const navigationItems: NavigationItem[] = [
     icon: Settings,
     description: "Configure system options, integration endpoints, and parameters.",
     isEnabled: true,
+    roles: ["admin"],
   },
 ];
