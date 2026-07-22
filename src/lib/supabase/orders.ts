@@ -159,5 +159,23 @@ export async function createOrder(supabase: SupabaseClient, input: CreateOrderIn
     throw itemsError
   }
 
-  return order.id as string
+  const orderId = order.id as string
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  // Logged so it can surface as "Orders placed" on the customer's timeline.
+  // Deliberately not thrown on failure - the order itself was created
+  // successfully, and a secondary audit-log write shouldn't roll that back.
+  await supabase.from("activity_logs").insert({
+    entity_type: "order",
+    entity_id: orderId,
+    action: "created",
+    description: "Order created.",
+    actor_id: user?.id ?? null,
+  })
+  // (error intentionally ignored - see comment above)
+
+  return orderId
 }
