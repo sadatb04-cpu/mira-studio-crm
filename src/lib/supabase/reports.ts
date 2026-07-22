@@ -43,6 +43,12 @@ export function resolveDateRange(preset: DateRangePreset, customFrom?: string, c
     return { from: `${today.getFullYear()}-01-01`, to }
   }
 
+  if (preset === "12m") {
+    const from = new Date(today)
+    from.setDate(from.getDate() - 365)
+    return { from: toDateString(from), to }
+  }
+
   const days = preset === "7d" ? 7 : preset === "30d" ? 30 : 90
   const from = new Date(today)
   from.setDate(from.getDate() - days)

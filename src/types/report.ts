@@ -3,7 +3,7 @@ import type { ProductionJobStatus } from "@/types/production"
 import type { InventoryCategory } from "@/types/inventory"
 import type { TaskStatus } from "@/types/task"
 
-export const DATE_RANGE_PRESETS = ["today", "7d", "30d", "90d", "year", "custom"] as const
+export const DATE_RANGE_PRESETS = ["today", "7d", "30d", "90d", "year", "12m", "custom"] as const
 export type DateRangePreset = (typeof DATE_RANGE_PRESETS)[number]
 
 export const DATE_RANGE_PRESET_LABELS: Record<DateRangePreset, string> = {
@@ -12,8 +12,12 @@ export const DATE_RANGE_PRESET_LABELS: Record<DateRangePreset, string> = {
   "30d": "30 Days",
   "90d": "90 Days",
   year: "This Year",
+  "12m": "Last 12 Months",
   custom: "Custom",
 }
+
+/** Presets shown on the Executive Dashboard's date range filter (excludes "year" - This Year - which is Reports-specific). */
+export const DASHBOARD_DATE_RANGE_PRESETS: DateRangePreset[] = ["today", "7d", "30d", "90d", "12m", "custom"]
 
 export interface ReportDateRange {
   from: string
