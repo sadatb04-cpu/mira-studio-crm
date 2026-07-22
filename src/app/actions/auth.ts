@@ -46,7 +46,7 @@ export async function signup(_prevState: AuthFormState, formData: FormData): Pro
   }
 
   const supabase = await createClient()
-  const { error } = await supabase.auth.signUp({
+  const { data, error } = await supabase.auth.signUp({
     email: validated.data.email,
     password: validated.data.password,
     options: {
@@ -54,9 +54,15 @@ export async function signup(_prevState: AuthFormState, formData: FormData): Pro
     },
   })
 
-  if (error) {
-    return { error: error.message }
+  if (error || !data.user) {
+    return { error: error?.message ?? "Unable to create account." }
   }
+
+  // If the project auto-confirms email (no verification step), signUp()
+  // immediately creates a session - the proxy will then route this request
+  // straight into the app, so the profile row must already exist by the
+  // time any (app) page reads it via getProfile()'s .single() call.
+  await ensureProfile(supabase, data.user)
 
   redirect("/login?registered=1")
 }
