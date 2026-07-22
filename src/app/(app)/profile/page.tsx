@@ -5,15 +5,7 @@ import { SectionCard } from "@/components/shared/section-card"
 import { StatusBadge } from "@/components/shared/status-badge"
 import { createClient } from "@/lib/supabase/server"
 import { getProfile } from "@/lib/supabase/profile"
-import type { UserRole } from "@/types/profile"
-
-const ROLE_LABELS: Record<UserRole, string> = {
-  admin: "Admin",
-  operations_manager: "Operations Manager",
-  production_manager: "Production Manager",
-  sales: "Sales",
-  employee: "Employee",
-}
+import { DEPARTMENT_LABELS, USER_ROLE_LABELS } from "@/types/profile"
 
 export default async function ProfilePage() {
   const supabase = await createClient()
@@ -30,8 +22,8 @@ export default async function ProfilePage() {
   const fields: Array<{ label: string; value: string }> = [
     { label: "Full name", value: profile.full_name },
     { label: "Email", value: profile.email },
-    { label: "Role", value: ROLE_LABELS[profile.role] },
-    { label: "Department", value: profile.department ?? "Not set" },
+    { label: "Role", value: USER_ROLE_LABELS[profile.role] },
+    { label: "Department", value: profile.department ? DEPARTMENT_LABELS[profile.department] : "Not set" },
     { label: "Phone", value: profile.phone ?? "Not set" },
   ]
 
