@@ -1129,6 +1129,9 @@ export type Database = {
         | "delivered"
         | "completed"
         | "cancelled"
+        | "pricing_ready"
+        | "awaiting_approval"
+        | "approved"
       production_job_status:
         | "queued"
         | "in_progress"
@@ -1389,6 +1392,9 @@ export const Constants = {
         "delivered",
         "completed",
         "cancelled",
+        "pricing_ready",
+        "awaiting_approval",
+        "approved",
       ],
       production_job_status: [
         "queued",

@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js"
 
-import { logActivity } from "@/lib/supabase/orders"
+import { advanceOrderStatus, logActivity } from "@/lib/supabase/orders"
 import type { Quotation, QuotationStatus } from "@/types/quotation"
 
 const QUOTATION_COLUMNS =
@@ -85,6 +85,11 @@ export async function createQuotation(supabase: SupabaseClient, orderId: string,
 
   const quotationId = data.id as string
   await logActivity(supabase, { entity_id: orderId, action: "quotation_created", description: `Created quotation "${input.quote_name}".` })
+
+  // Sprint 4.1.3: the first quotation on a fresh order automatically moves
+  // it out of Draft - a no-op (guarded, no log) if the order has already
+  // progressed past Draft (e.g. a second/alternative quotation being added later).
+  await advanceOrderStatus(supabase, orderId, ["draft"], "pricing_ready", "status_pricing_ready", "Pricing Added.")
 
   return quotationId
 }
@@ -238,6 +243,36 @@ export async function updateQuotationStatus(
       action,
       description: `"${quotation.quote_name}" marked as ${status}.`,
     })
+  }
+
+  // Sprint 4.1.3: this deliberate quotation-status change is exactly the
+  // order-level workflow action ("Send Quote" / "Customer Approved" /
+  // "Customer Rejected") - each guarded so it's a no-op unless the order is
+  // actually in the expected prior stage (e.g. re-sending an already-sent
+  // quote, or a quotation status change on an order already in production,
+  // does not spuriously move or re-log the order's stage). Deliberately not
+  // hooked to the auto-flip-to-"sent" above, which is a side effect of a
+  // DIFFERENT quotation being accepted, not this action.
+  if (status === "sent") {
+    await advanceOrderStatus(supabase, orderId, ["pricing_ready"], "awaiting_approval", "status_awaiting_approval", "Quote Sent.")
+  } else if (status === "accepted") {
+    await advanceOrderStatus(
+      supabase,
+      orderId,
+      ["pricing_ready", "awaiting_approval"],
+      "approved",
+      "status_approved",
+      "Customer Approved."
+    )
+  } else if (status === "rejected") {
+    await advanceOrderStatus(
+      supabase,
+      orderId,
+      ["pricing_ready", "awaiting_approval", "approved"],
+      "pricing_ready",
+      "status_rejected",
+      "Customer Rejected - returned to Pricing Ready."
+    )
   }
 }
 

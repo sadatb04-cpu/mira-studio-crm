@@ -252,6 +252,50 @@ export async function logActivity(supabase: SupabaseClient, entry: { entity_id: 
   })
 }
 
+// Sprint 4.1.3 (Order Workflow & Status Automation) - the single place every
+// automatic order-status transition goes through. Guarded by fromStatuses so
+// it's a no-op (and does NOT log) unless the order is actually in one of the
+// expected prior stages - this is what makes it safe to call from multiple
+// call sites (quotations.ts, production.ts) without producing a stray
+// transition or a duplicate log for an order that's already moved on.
+export async function advanceOrderStatus(
+  supabase: SupabaseClient,
+  orderId: string,
+  fromStatuses: OrderStatus[],
+  toStatus: OrderStatus,
+  action: string,
+  description: string
+): Promise<void> {
+  const { data, error } = await supabase
+    .from("orders")
+    .update({ status: toStatus })
+    .eq("id", orderId)
+    .in("status", fromStatuses)
+    .select("id")
+
+  if (error) throw error
+
+  if (data && data.length > 0) {
+    await logActivity(supabase, { entity_id: orderId, action, description })
+  }
+}
+
+// Sprint 4.1.3 - the one manual step in the automated workflow (there is no
+// existing trigger for this transition anywhere in the app to reuse). Unlike
+// advanceOrderStatus()'s other, side-effect call sites, this is a direct,
+// deliberate user action, so an invalid transition throws instead of
+// silently no-op'ing.
+export async function markOrderDelivered(supabase: SupabaseClient, orderId: string): Promise<void> {
+  const { data: order, error } = await supabase.from("orders").select("status").eq("id", orderId).single()
+  if (error) throw error
+
+  if (order.status !== "ready_for_delivery") {
+    throw new Error("This order is not ready for delivery yet.")
+  }
+
+  await advanceOrderStatus(supabase, orderId, ["ready_for_delivery"], "delivered", "status_delivered", "Delivered.")
+}
+
 // Simplified order creation (Sprint "Simplify Order Creation") - just the
 // order row plus a single order_item carrying the product name. quantity/
 // unit_price default to placeholders (1 / 0); pricing and stone/spec detail

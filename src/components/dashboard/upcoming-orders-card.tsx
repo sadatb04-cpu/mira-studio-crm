@@ -11,6 +11,9 @@ import type { OrderListItem, OrderStatus } from "@/types/order"
 
 const STATUS_TONE: Record<OrderStatus, StatusTone> = {
   draft: "neutral",
+  pricing_ready: "info",
+  awaiting_approval: "warning",
+  approved: "success",
   confirmed: "info",
   in_production: "warning",
   ready_for_delivery: "info",

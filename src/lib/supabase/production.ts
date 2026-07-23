@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js"
 
 import { getSettingsBundle } from "@/lib/supabase/settings"
 import { hasAcceptedQuotation } from "@/lib/supabase/quotations"
+import { advanceOrderStatus } from "@/lib/supabase/orders"
 import { STAGE_SEQUENCE } from "@/types/production"
 import type {
   EmployeeOption,
@@ -239,6 +240,19 @@ export async function createProductionJob(supabase: SupabaseClient, orderId: str
     jobIds.push(jobId)
   }
 
+  // Sprint 4.1.3: Approved -> In Production, only for a genuinely new
+  // release - guarded (no-op, no log) for the idempotent re-call case.
+  if (isNewRelease) {
+    await advanceOrderStatus(
+      supabase,
+      orderId,
+      ["approved"],
+      "in_production",
+      "status_in_production",
+      "Released to Production."
+    )
+  }
+
   return jobIds
 }
 
@@ -260,11 +274,13 @@ type ProductionStatusAction = "advance" | "cancel"
 export async function updateStatus(supabase: SupabaseClient, jobId: string, action: ProductionStatusAction): Promise<void> {
   const { data: job, error: jobError } = await supabase
     .from("production_jobs")
-    .select("id, status")
+    .select("id, status, order_item:order_items(order_id)")
     .eq("id", jobId)
     .single()
 
   if (jobError) throw jobError
+
+  const orderId = (job.order_item as unknown as { order_id: string } | null)?.order_id ?? null
 
   if (job.status === "completed" || job.status === "cancelled") {
     throw new Error("This job has already finished and cannot be updated.")
@@ -377,5 +393,38 @@ export async function updateStatus(supabase: SupabaseClient, jobId: string, acti
       action: "ready",
       description: "Production job is ready.",
     })
+
+    // Sprint 4.1.3: In Production -> Ready for Delivery, but only once
+    // EVERY production job for this order has finished - an order can have
+    // more than one item/job, and one finishing early shouldn't move the
+    // order forward on its own.
+    if (orderId) {
+      const { data: siblingItems, error: siblingItemsError } = await supabase
+        .from("order_items")
+        .select("id")
+        .eq("order_id", orderId)
+
+      if (siblingItemsError) throw siblingItemsError
+
+      const { data: siblingJobs, error: siblingJobsError } = await supabase
+        .from("production_jobs")
+        .select("status")
+        .in("order_item_id", (siblingItems ?? []).map((item) => item.id))
+
+      if (siblingJobsError) throw siblingJobsError
+
+      const allFinished = (siblingJobs ?? []).every((sibling) => sibling.status === "completed" || sibling.status === "cancelled")
+
+      if (allFinished) {
+        await advanceOrderStatus(
+          supabase,
+          orderId,
+          ["in_production"],
+          "ready_for_delivery",
+          "status_ready_for_delivery",
+          "Production Completed - Ready for Delivery."
+        )
+      }
+    }
   }
 }

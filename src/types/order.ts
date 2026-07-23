@@ -1,5 +1,8 @@
 export type OrderStatus =
   | "draft"
+  | "pricing_ready"
+  | "awaiting_approval"
+  | "approved"
   | "confirmed"
   | "in_production"
   | "ready_for_delivery"
@@ -9,6 +12,9 @@ export type OrderStatus =
 
 export const ORDER_STATUSES: OrderStatus[] = [
   "draft",
+  "pricing_ready",
+  "awaiting_approval",
+  "approved",
   "confirmed",
   "in_production",
   "ready_for_delivery",
@@ -19,12 +25,40 @@ export const ORDER_STATUSES: OrderStatus[] = [
 
 export const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
   draft: "Draft",
+  pricing_ready: "Pricing Ready",
+  awaiting_approval: "Awaiting Approval",
+  approved: "Approved",
   confirmed: "Confirmed",
   in_production: "In Production",
   ready_for_delivery: "Ready for Delivery",
   delivered: "Delivered",
   completed: "Completed",
   cancelled: "Cancelled",
+}
+
+// The linear sales-review -> production -> delivery lifecycle a new order
+// automatically progresses through (Sprint 4.1.3). "confirmed" and
+// "completed" are legacy statuses from before this workflow existed - they
+// are not part of it, but map to the closest stage below for display so an
+// old order with one of those statuses still renders a sensible stepper.
+export const ORDER_WORKFLOW_STAGES: OrderStatus[] = [
+  "draft",
+  "pricing_ready",
+  "awaiting_approval",
+  "approved",
+  "in_production",
+  "ready_for_delivery",
+  "delivered",
+]
+
+const LEGACY_STATUS_STAGE_ALIAS: Partial<Record<OrderStatus, OrderStatus>> = {
+  confirmed: "approved",
+  completed: "delivered",
+}
+
+export function getWorkflowStageIndex(status: OrderStatus): number {
+  const resolved = LEGACY_STATUS_STAGE_ALIAS[status] ?? status
+  return ORDER_WORKFLOW_STAGES.indexOf(resolved)
 }
 
 export interface OrderListItem {

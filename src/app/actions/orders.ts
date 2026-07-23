@@ -1,9 +1,14 @@
 "use server"
 
 import { redirect } from "next/navigation"
+import { revalidatePath } from "next/cache"
 
 import { createClient } from "@/lib/supabase/server"
-import { createOrder as createOrderQuery, updateOrder as updateOrderQuery } from "@/lib/supabase/orders"
+import {
+  createOrder as createOrderQuery,
+  markOrderDelivered as markOrderDeliveredQuery,
+  updateOrder as updateOrderQuery,
+} from "@/lib/supabase/orders"
 import { orderFormSchema } from "@/lib/validations/order"
 import type { OrderFormInput } from "@/lib/validations/order"
 
@@ -62,4 +67,17 @@ export async function updateOrder(orderId: string, input: OrderFormInput): Promi
   }
 
   redirect(`/orders/${orderId}`)
+}
+
+export async function markOrderDelivered(orderId: string): Promise<OrderActionState> {
+  const supabase = await createClient()
+
+  try {
+    await markOrderDeliveredQuery(supabase, orderId)
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : "Unable to mark this order as delivered." }
+  }
+
+  revalidatePath(`/orders/${orderId}`)
+  return {}
 }

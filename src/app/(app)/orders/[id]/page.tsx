@@ -10,6 +10,8 @@ import type { StatusTone } from "@/components/shared/status-badge"
 import { EmptyState } from "@/components/shared/empty-state"
 import { Button } from "@/components/ui/button"
 import { OrderTimeline } from "@/components/orders/order-timeline"
+import { OrderWorkflowStepper } from "@/components/orders/order-workflow-stepper"
+import { OrderWorkflowActions } from "@/components/orders/order-workflow-actions"
 import { PricingSection } from "@/components/orders/pricing-section"
 import { createClient } from "@/lib/supabase/server"
 import { getOrderById, getOrderTimeline } from "@/lib/supabase/orders"
@@ -22,6 +24,9 @@ import type { OrderStatus } from "@/types/order"
 
 const STATUS_TONE: Record<OrderStatus, StatusTone> = {
   draft: "neutral",
+  pricing_ready: "info",
+  awaiting_approval: "warning",
+  approved: "success",
   confirmed: "info",
   in_production: "warning",
   ready_for_delivery: "info",
@@ -73,6 +78,13 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
           </div>
         }
       />
+
+      <SectionCard title="Workflow">
+        <div className="flex flex-col gap-4">
+          <OrderWorkflowStepper status={order.status} />
+          <OrderWorkflowActions orderId={orderId} status={order.status} quotations={quotations} />
+        </div>
+      </SectionCard>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <SectionCard title="Customer">
