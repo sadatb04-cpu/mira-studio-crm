@@ -404,6 +404,54 @@ export type Database = {
           },
         ]
       }
+      order_files: {
+        Row: {
+          created_at: string
+          file_name: string
+          file_size: number
+          file_type: string
+          file_url: string
+          id: string
+          order_id: string
+          uploaded_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          file_name: string
+          file_size: number
+          file_type: string
+          file_url: string
+          id?: string
+          order_id: string
+          uploaded_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          file_name?: string
+          file_size?: number
+          file_type?: string
+          file_url?: string
+          id?: string
+          order_id?: string
+          uploaded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_files_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_files_uploaded_by_fkey"
+            columns: ["uploaded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       order_items: {
         Row: {
           created_at: string
@@ -451,6 +499,56 @@ export type Database = {
           },
           {
             foreignKeyName: "order_items_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      order_stones: {
+        Row: {
+          carat_weight: number
+          clarity: string | null
+          color: string | null
+          created_at: string
+          id: string
+          mm_size: string
+          notes: string | null
+          order_id: string
+          quantity: number
+          shape: Database["public"]["Enums"]["stone_shape"]
+          stone_type: Database["public"]["Enums"]["stone_type"]
+        }
+        Insert: {
+          carat_weight: number
+          clarity?: string | null
+          color?: string | null
+          created_at?: string
+          id?: string
+          mm_size: string
+          notes?: string | null
+          order_id: string
+          quantity?: number
+          shape: Database["public"]["Enums"]["stone_shape"]
+          stone_type: Database["public"]["Enums"]["stone_type"]
+        }
+        Update: {
+          carat_weight?: number
+          clarity?: string | null
+          color?: string | null
+          created_at?: string
+          id?: string
+          mm_size?: string
+          notes?: string | null
+          order_id?: string
+          quantity?: number
+          shape?: Database["public"]["Enums"]["stone_shape"]
+          stone_type?: Database["public"]["Enums"]["stone_type"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_stones_order_id_fkey"
             columns: ["order_id"]
             isOneToOne: false
             referencedRelation: "orders"
@@ -971,6 +1069,31 @@ export type Database = {
         | "in_progress"
         | "completed"
         | "skipped"
+      stone_shape:
+        | "round"
+        | "oval"
+        | "princess"
+        | "cushion"
+        | "emerald"
+        | "pear"
+        | "marquise"
+        | "radiant"
+        | "asscher"
+        | "heart"
+        | "trillion"
+        | "baguette"
+        | "old_mine"
+        | "old_european"
+        | "other"
+      stone_type:
+        | "lab_diamond"
+        | "natural_diamond"
+        | "emerald"
+        | "ruby"
+        | "sapphire"
+        | "moissanite"
+        | "pearl"
+        | "other"
       task_priority: "low" | "medium" | "high" | "urgent"
       task_status: "todo" | "in_progress" | "blocked" | "done" | "cancelled"
       user_role:
@@ -1208,6 +1331,33 @@ export const Constants = {
         "in_progress",
         "completed",
         "skipped",
+      ],
+      stone_shape: [
+        "round",
+        "oval",
+        "princess",
+        "cushion",
+        "emerald",
+        "pear",
+        "marquise",
+        "radiant",
+        "asscher",
+        "heart",
+        "trillion",
+        "baguette",
+        "old_mine",
+        "old_european",
+        "other",
+      ],
+      stone_type: [
+        "lab_diamond",
+        "natural_diamond",
+        "emerald",
+        "ruby",
+        "sapphire",
+        "moissanite",
+        "pearl",
+        "other",
       ],
       task_priority: ["low", "medium", "high", "urgent"],
       task_status: ["todo", "in_progress", "blocked", "done", "cancelled"],

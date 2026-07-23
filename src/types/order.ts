@@ -38,59 +38,105 @@ export interface OrderListItem {
   created_at: string
   customer: { full_name: string } | null
   order_items: { count: number }[]
+  order_stones: { count: number }[]
 }
 
 export type OrderStatusCounts = Record<OrderStatus, number>
 
-export const JEWELRY_TYPES = [
-  "Ring",
-  "Necklace",
-  "Bracelet",
-  "Earrings",
-  "Pendant",
-  "Bangle",
-  "Anklet",
-  "Brooch",
-  "Cufflinks",
-  "Other",
-] as const
-export type JewelryType = (typeof JEWELRY_TYPES)[number]
-
-export const METALS = ["Gold", "White Gold", "Rose Gold", "Platinum", "Silver", "Palladium", "Titanium"] as const
-export type Metal = (typeof METALS)[number]
-
-export const METAL_PURITIES = ["24k", "22k", "18k", "14k", "10k", "950 Platinum", "925 Silver"] as const
-export type MetalPurity = (typeof METAL_PURITIES)[number]
-
+// Stone type/shape back the order_stones table (Sprint 4.1.1). The order
+// creation/edit form no longer collects them directly (Sprint "Simplify
+// Order Creation") - order_stones is populated later by Sales/CAD/Production
+// - but the table and these types stay, and getOrderById() still reads them.
 export const STONE_TYPES = [
-  "Diamond",
-  "Sapphire",
-  "Ruby",
-  "Emerald",
-  "Pearl",
-  "Amethyst",
-  "Topaz",
-  "Aquamarine",
-  "Other",
-  "None",
+  "lab_diamond",
+  "natural_diamond",
+  "emerald",
+  "ruby",
+  "sapphire",
+  "moissanite",
+  "pearl",
+  "other",
 ] as const
 export type StoneType = (typeof STONE_TYPES)[number]
 
+export const STONE_TYPE_LABELS: Record<StoneType, string> = {
+  lab_diamond: "Lab Diamond",
+  natural_diamond: "Natural Diamond",
+  emerald: "Emerald",
+  ruby: "Ruby",
+  sapphire: "Sapphire",
+  moissanite: "Moissanite",
+  pearl: "Pearl",
+  other: "Other",
+}
+
 export const STONE_SHAPES = [
-  "Round",
-  "Princess",
-  "Cushion",
-  "Oval",
-  "Emerald",
-  "Pear",
-  "Marquise",
-  "Radiant",
-  "Asscher",
-  "Heart",
-  "N/A",
+  "round",
+  "oval",
+  "princess",
+  "cushion",
+  "emerald",
+  "pear",
+  "marquise",
+  "radiant",
+  "asscher",
+  "heart",
+  "trillion",
+  "baguette",
+  "old_mine",
+  "old_european",
+  "other",
 ] as const
 export type StoneShape = (typeof STONE_SHAPES)[number]
 
+export const STONE_SHAPE_LABELS: Record<StoneShape, string> = {
+  round: "Round",
+  oval: "Oval",
+  princess: "Princess",
+  cushion: "Cushion",
+  emerald: "Emerald",
+  pear: "Pear",
+  marquise: "Marquise",
+  radiant: "Radiant",
+  asscher: "Asscher",
+  heart: "Heart",
+  trillion: "Trillion",
+  baguette: "Baguette",
+  old_mine: "Old Mine",
+  old_european: "Old European",
+  other: "Other",
+}
+
+export interface OrderStone {
+  id: string
+  stone_type: StoneType
+  shape: StoneShape
+  quantity: number
+  mm_size: string
+  carat_weight: number
+  color: string | null
+  clarity: string | null
+  notes: string | null
+}
+
+export const ALLOWED_ORDER_FILE_MIME_TYPES = ["image/jpeg", "image/png", "image/webp", "application/pdf"] as const
+export type AllowedOrderFileMimeType = (typeof ALLOWED_ORDER_FILE_MIME_TYPES)[number]
+
+export const MAX_ORDER_FILE_SIZE_BYTES = 25 * 1024 * 1024
+
+export interface OrderFile {
+  id: string
+  file_name: string
+  file_type: string
+  file_size: number
+  uploadedByName: string | null
+  created_at: string
+  signedUrl: string | null
+}
+
+// Legacy fields from pre-simplification order forms (Sprint 4.1 and Sprint
+// 4.1.1) - no longer written by the current form, kept only so older orders'
+// stored specifications still type correctly when read.
 export interface OrderItemSpecifications {
   jewelry_type?: string
   metal?: string
@@ -109,6 +155,13 @@ export interface OrderItemDetail {
   quantity: number
   unit_price: number
   total_price: number | null
+}
+
+export interface OrderTimelineEvent {
+  id: string
+  action: string
+  description: string | null
+  created_at: string
 }
 
 export interface CustomerOption {
@@ -140,5 +193,10 @@ export interface OrderDetail {
   currency: string
   created_at: string
   customer: OrderDetailCustomer | null
+  customer_id: string
+  /** The order's single product (first order_item's description) - the simplified form's "Product Name". */
+  productName: string
   order_items: OrderItemDetail[]
+  stones: OrderStone[]
+  files: OrderFile[]
 }

@@ -58,6 +58,7 @@ export function OrdersTable({ orders }: OrdersTableProps) {
             <th className="px-4 py-2">Customer</th>
             <th className="px-4 py-2">Status</th>
             <th className="px-4 py-2">Items</th>
+            <th className="px-4 py-2">Stones</th>
             <th className="px-4 py-2">Order Date</th>
             <th className="px-4 py-2">Due Date</th>
             <th className="px-4 py-2 text-right">Total</th>
@@ -84,6 +85,9 @@ export function OrdersTable({ orders }: OrdersTableProps) {
                 <StatusBadge label={ORDER_STATUS_LABELS[order.status]} tone={STATUS_TONE[order.status]} />
               </td>
               <td className="px-4 py-2.5 text-muted-foreground">{order.order_items[0]?.count ?? 0}</td>
+              <td className="px-4 py-2.5 text-muted-foreground">
+                {order.order_stones[0]?.count ?? 0} Stone{(order.order_stones[0]?.count ?? 0) === 1 ? "" : "s"}
+              </td>
               <td className="px-4 py-2.5 text-muted-foreground">{formatDate(order.order_date)}</td>
               <td className="px-4 py-2.5 text-muted-foreground">
                 {order.due_date ? formatDate(order.due_date) : "—"}

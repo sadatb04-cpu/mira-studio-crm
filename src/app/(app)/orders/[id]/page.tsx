@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation"
 import { format } from "date-fns"
 import Link from "next/link"
+import { FileText, Pencil } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import { PageHeader } from "@/components/shared/page-header"
@@ -8,12 +9,15 @@ import { SectionCard } from "@/components/shared/section-card"
 import { StatusBadge } from "@/components/shared/status-badge"
 import type { StatusTone } from "@/components/shared/status-badge"
 import { EmptyState } from "@/components/shared/empty-state"
+import { Button } from "@/components/ui/button"
+import { OrderTimeline } from "@/components/orders/order-timeline"
 import { createClient } from "@/lib/supabase/server"
-import { getOrderById } from "@/lib/supabase/orders"
+import { getOrderById, getOrderTimeline } from "@/lib/supabase/orders"
 import { getProductionJobsForOrder } from "@/lib/supabase/production"
 import { ReleaseToProductionButton } from "@/app/(app)/orders/[id]/release-to-production-button"
+import { formatFileSize } from "@/types/document"
 import { ORDER_STATUS_LABELS } from "@/types/order"
-import type { OrderItemDetail, OrderStatus } from "@/types/order"
+import type { OrderStatus } from "@/types/order"
 
 const STATUS_TONE: Record<OrderStatus, StatusTone> = {
   draft: "neutral",
@@ -33,27 +37,6 @@ function formatDate(value: string) {
   return format(new Date(value), "MMM d, yyyy")
 }
 
-function formatSpecSummary(specifications: OrderItemDetail["specifications"]) {
-  const pieceParts = [specifications.metal_purity, specifications.metal, specifications.jewelry_type].filter(
-    Boolean
-  )
-  const stoneParts = [specifications.stone_shape, specifications.stone_type, specifications.stone_size].filter(
-    Boolean
-  )
-
-  const extras: string[] = []
-  if (specifications.ring_size) extras.push(`Ring size ${specifications.ring_size}`)
-  if (specifications.engraving) extras.push(`Engraving: "${specifications.engraving}"`)
-
-  const summary = [
-    pieceParts.length ? pieceParts.join(" ") : null,
-    stoneParts.length ? stoneParts.join(" ") : null,
-    ...extras,
-  ].filter(Boolean)
-
-  return summary.length ? summary.join(" · ") : null
-}
-
 interface OrderDetailPageProps {
   params: Promise<{ id: string }>
 }
@@ -68,14 +51,27 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
   }
 
   const orderId = order.id
-  const productionJobs = await getProductionJobsForOrder(supabase, orderId)
+  const [productionJobs, timeline] = await Promise.all([
+    getProductionJobsForOrder(supabase, orderId),
+    getOrderTimeline(supabase, orderId),
+  ])
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-6">
       <PageHeader
         title={order.order_number}
         description={`Placed ${formatDate(order.order_date)}`}
-        actions={<StatusBadge label={ORDER_STATUS_LABELS[order.status]} tone={STATUS_TONE[order.status]} />}
+        actions={
+          <div className="flex items-center gap-2">
+            <StatusBadge label={ORDER_STATUS_LABELS[order.status]} tone={STATUS_TONE[order.status]} />
+            <Button asChild size="sm">
+              <Link href={`/orders/${orderId}/edit`}>
+                <Pencil className="size-3.5" data-icon="inline-start" />
+                Edit Order
+              </Link>
+            </Button>
+          </div>
+        }
       />
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
@@ -94,49 +90,40 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
 
         <SectionCard title="Order Information">
           <dl className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <Field label="Product Name" value={order.productName || "—"} />
             <Field label="Due Date" value={order.due_date ? formatDate(order.due_date) : "Not set"} />
-            <Field label="Notes" value={order.notes ?? "—"} className="sm:col-span-2" />
+            <Field label="Order Requirements" value={order.notes ?? "—"} className="sm:col-span-2" />
           </dl>
         </SectionCard>
       </div>
 
-      <SectionCard title="Order Items">
-        {order.order_items.length === 0 ? (
-          <EmptyState title="No items on this order" />
+      <SectionCard title="Reference Images & Files">
+        {order.files.length === 0 ? (
+          <EmptyState title="No reference files on this order" />
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border text-left text-xs font-medium text-muted-foreground">
-                  <th className="px-4 py-2">Item</th>
-                  <th className="px-4 py-2 text-right">Quantity</th>
-                  <th className="px-4 py-2 text-right">Unit Price</th>
-                  <th className="px-4 py-2 text-right">Total</th>
-                </tr>
-              </thead>
-              <tbody>
-                {order.order_items.map((item) => {
-                  const specSummary = formatSpecSummary(item.specifications)
-                  const lineTotal = item.total_price ?? item.quantity * item.unit_price
-
-                  return (
-                    <tr key={item.id} className="border-b border-border last:border-0">
-                      <td className="px-4 py-2.5">
-                        <div className="font-medium text-foreground">{item.description}</div>
-                        {specSummary && <div className="text-xs text-muted-foreground">{specSummary}</div>}
-                      </td>
-                      <td className="px-4 py-2.5 text-right text-muted-foreground">{item.quantity}</td>
-                      <td className="px-4 py-2.5 text-right text-muted-foreground">
-                        {formatCurrency(item.unit_price, order.currency)}
-                      </td>
-                      <td className="px-4 py-2.5 text-right font-medium text-foreground">
-                        {formatCurrency(lineTotal, order.currency)}
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+            {order.files.map((file) => (
+              <a
+                key={file.id}
+                href={file.signedUrl ?? undefined}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex flex-col gap-2 rounded-xl border border-border p-3 transition-colors hover:bg-muted/50"
+              >
+                <div className="flex h-20 items-center justify-center overflow-hidden rounded-lg bg-muted">
+                  {file.file_type.startsWith("image/") && file.signedUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={file.signedUrl} alt={file.file_name} className="h-full w-full object-cover" />
+                  ) : (
+                    <FileText className="size-6 text-muted-foreground" />
+                  )}
+                </div>
+                <p className="truncate text-xs font-medium text-foreground" title={file.file_name}>
+                  {file.file_name}
+                </p>
+                <p className="text-xs text-muted-foreground">{formatFileSize(file.file_size)}</p>
+              </a>
+            ))}
           </div>
         )}
       </SectionCard>
@@ -167,6 +154,10 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
           )}
         </SectionCard>
       </div>
+
+      <SectionCard title="Activity Timeline">
+        <OrderTimeline events={timeline} />
+      </SectionCard>
     </div>
   )
 }

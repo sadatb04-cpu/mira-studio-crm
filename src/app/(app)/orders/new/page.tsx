@@ -5,7 +5,7 @@ import { SectionCard } from "@/components/shared/section-card"
 import { EmptyState } from "@/components/shared/empty-state"
 import { createClient } from "@/lib/supabase/server"
 import { getCustomers } from "@/lib/supabase/orders"
-import { CreateOrderWizard } from "@/app/(app)/orders/new/create-order-wizard"
+import { OrderForm } from "@/components/orders/order-form"
 
 export default async function NewOrderPage() {
   const supabase = await createClient()
@@ -24,7 +24,7 @@ export default async function NewOrderPage() {
           />
         </SectionCard>
       ) : (
-        <CreateOrderWizard customers={customers} />
+        <OrderForm mode="create" customers={customers} />
       )}
     </div>
   )
