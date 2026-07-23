@@ -215,6 +215,7 @@ export async function createCustomer(supabase: SupabaseClient, input: CustomerFo
       full_name: input.full_name,
       email: input.email || null,
       phone: input.phone || null,
+      address_line1: input.address_line1 || null,
       country: input.country || null,
       notes: input.notes || null,
     })

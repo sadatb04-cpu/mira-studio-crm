@@ -43,6 +43,7 @@ export function OrderForm({ mode, order, customers: initialCustomers }: OrderFor
   const [newCustomerName, setNewCustomerName] = useState("")
   const [newCustomerEmail, setNewCustomerEmail] = useState("")
   const [newCustomerPhone, setNewCustomerPhone] = useState("")
+  const [newCustomerAddress, setNewCustomerAddress] = useState("")
   const [customerError, setCustomerError] = useState<string | null>(null)
   const [isAddingCustomerPending, startAddingCustomerTransition] = useTransition()
 
@@ -128,6 +129,7 @@ export function OrderForm({ mode, order, customers: initialCustomers }: OrderFor
         full_name: newCustomerName,
         email: newCustomerEmail || undefined,
         phone: newCustomerPhone || undefined,
+        address_line1: newCustomerAddress || undefined,
       })
 
       if (result.error || !result.customer) {
@@ -141,6 +143,7 @@ export function OrderForm({ mode, order, customers: initialCustomers }: OrderFor
       setNewCustomerName("")
       setNewCustomerEmail("")
       setNewCustomerPhone("")
+      setNewCustomerAddress("")
     })
   }
 
@@ -227,6 +230,17 @@ export function OrderForm({ mode, order, customers: initialCustomers }: OrderFor
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="new-customer-phone">Phone</Label>
                 <Input id="new-customer-phone" value={newCustomerPhone} onChange={(event) => setNewCustomerPhone(event.target.value)} />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="new-customer-address">Address</Label>
+                <textarea
+                  id="new-customer-address"
+                  value={newCustomerAddress}
+                  onChange={(event) => setNewCustomerAddress(event.target.value)}
+                  rows={3}
+                  className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground shadow-xs outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30"
+                  placeholder="Street, City, State, ZIP, Country"
+                />
               </div>
               {customerError && <p className="text-sm text-destructive">{customerError}</p>}
               <div className="flex items-center gap-2">

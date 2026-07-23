@@ -7,6 +7,7 @@ export const customerFormSchema = z.object({
     .optional()
     .or(z.literal("")),
   phone: z.string().trim().optional(),
+  address_line1: z.string().trim().optional(),
   country: z.string().trim().optional(),
   notes: z.string().trim().optional(),
 })

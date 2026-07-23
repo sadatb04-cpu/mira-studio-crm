@@ -61,6 +61,7 @@ export interface CustomerFormInput {
   full_name: string
   email?: string
   phone?: string
+  address_line1?: string
   country?: string
   notes?: string
 }
