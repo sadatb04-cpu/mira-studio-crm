@@ -506,6 +506,90 @@ export type Database = {
           },
         ]
       }
+      order_quotations: {
+        Row: {
+          cad_cost: number
+          certification_cost: number
+          created_at: string
+          created_by: string | null
+          discount: number
+          grand_total: number | null
+          hallmark_cost: number
+          id: string
+          labor_cost: number
+          metal_cost: number
+          notes: string | null
+          order_id: string
+          other_charges: number
+          packaging_cost: number
+          quote_name: string
+          setting_cost: number
+          shipping_cost: number
+          status: Database["public"]["Enums"]["quotation_status"]
+          stone_cost: number
+          updated_at: string
+        }
+        Insert: {
+          cad_cost?: number
+          certification_cost?: number
+          created_at?: string
+          created_by?: string | null
+          discount?: number
+          grand_total?: number | null
+          hallmark_cost?: number
+          id?: string
+          labor_cost?: number
+          metal_cost?: number
+          notes?: string | null
+          order_id: string
+          other_charges?: number
+          packaging_cost?: number
+          quote_name: string
+          setting_cost?: number
+          shipping_cost?: number
+          status?: Database["public"]["Enums"]["quotation_status"]
+          stone_cost?: number
+          updated_at?: string
+        }
+        Update: {
+          cad_cost?: number
+          certification_cost?: number
+          created_at?: string
+          created_by?: string | null
+          discount?: number
+          grand_total?: number | null
+          hallmark_cost?: number
+          id?: string
+          labor_cost?: number
+          metal_cost?: number
+          notes?: string | null
+          order_id?: string
+          other_charges?: number
+          packaging_cost?: number
+          quote_name?: string
+          setting_cost?: number
+          shipping_cost?: number
+          status?: Database["public"]["Enums"]["quotation_status"]
+          stone_cost?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_quotations_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_quotations_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       order_stones: {
         Row: {
           carat_weight: number
@@ -1069,6 +1153,7 @@ export type Database = {
         | "in_progress"
         | "completed"
         | "skipped"
+      quotation_status: "draft" | "sent" | "accepted" | "rejected"
       stone_shape:
         | "round"
         | "oval"
@@ -1332,6 +1417,7 @@ export const Constants = {
         "completed",
         "skipped",
       ],
+      quotation_status: ["draft", "sent", "accepted", "rejected"],
       stone_shape: [
         "round",
         "oval",

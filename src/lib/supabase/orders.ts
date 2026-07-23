@@ -234,7 +234,11 @@ interface OrderWriteInput {
   files: OrderFileInput[]
 }
 
-async function logActivity(supabase: SupabaseClient, entry: { entity_id: string; action: string; description?: string }) {
+// Exported for reuse by quotations.ts - quotation activity (create/update/
+// delete/status changes) logs against the same order entity/timeline
+// rather than introducing a separate entity_type, keeping everything
+// visible in the order detail page's single Activity Timeline.
+export async function logActivity(supabase: SupabaseClient, entry: { entity_id: string; action: string; description?: string }) {
   const {
     data: { user },
   } = await supabase.auth.getUser()

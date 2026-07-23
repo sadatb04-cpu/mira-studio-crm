@@ -3,7 +3,6 @@ import { format } from "date-fns"
 import Link from "next/link"
 import { FileText, Pencil } from "lucide-react"
 
-import { cn } from "@/lib/utils"
 import { PageHeader } from "@/components/shared/page-header"
 import { SectionCard } from "@/components/shared/section-card"
 import { StatusBadge } from "@/components/shared/status-badge"
@@ -11,8 +10,10 @@ import type { StatusTone } from "@/components/shared/status-badge"
 import { EmptyState } from "@/components/shared/empty-state"
 import { Button } from "@/components/ui/button"
 import { OrderTimeline } from "@/components/orders/order-timeline"
+import { PricingSection } from "@/components/orders/pricing-section"
 import { createClient } from "@/lib/supabase/server"
 import { getOrderById, getOrderTimeline } from "@/lib/supabase/orders"
+import { getQuotationsForOrder } from "@/lib/supabase/quotations"
 import { getProductionJobsForOrder } from "@/lib/supabase/production"
 import { ReleaseToProductionButton } from "@/app/(app)/orders/[id]/release-to-production-button"
 import { formatFileSize } from "@/types/document"
@@ -27,10 +28,6 @@ const STATUS_TONE: Record<OrderStatus, StatusTone> = {
   delivered: "success",
   completed: "success",
   cancelled: "danger",
-}
-
-function formatCurrency(amount: number, currency: string) {
-  return new Intl.NumberFormat("en-US", { style: "currency", currency }).format(amount)
 }
 
 function formatDate(value: string) {
@@ -51,10 +48,13 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
   }
 
   const orderId = order.id
-  const [productionJobs, timeline] = await Promise.all([
+  const [productionJobs, timeline, quotations] = await Promise.all([
     getProductionJobsForOrder(supabase, orderId),
     getOrderTimeline(supabase, orderId),
+    getQuotationsForOrder(supabase, orderId),
   ])
+
+  const hasAccepted = quotations.some((quotation) => quotation.status === "accepted")
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-6">
@@ -128,32 +128,25 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
         )}
       </SectionCard>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <SectionCard title="Pricing Summary">
-          <dl className="flex flex-col gap-2 text-sm">
-            <SummaryRow label="Subtotal" value={formatCurrency(order.subtotal, order.currency)} />
-            <SummaryRow label="Tax" value={formatCurrency(order.tax, order.currency)} />
-            <SummaryRow label="Shipping" value={formatCurrency(order.shipping_cost, order.currency)} />
-            <SummaryRow label="Total" value={formatCurrency(order.total, order.currency)} emphasize />
-          </dl>
-        </SectionCard>
+      <PricingSection orderId={orderId} quotations={quotations} />
 
-        <SectionCard title="Production">
-          {productionJobs.length > 0 ? (
-            <ul className="flex flex-col gap-2">
-              {productionJobs.map((job) => (
-                <li key={job.id}>
-                  <Link href={`/production/${job.id}`} className="text-sm text-primary hover:underline">
-                    {job.job_number}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <ReleaseToProductionButton orderId={orderId} />
-          )}
-        </SectionCard>
-      </div>
+      <SectionCard title="Production">
+        {productionJobs.length > 0 ? (
+          <ul className="flex flex-col gap-2">
+            {productionJobs.map((job) => (
+              <li key={job.id}>
+                <Link href={`/production/${job.id}`} className="text-sm text-primary hover:underline">
+                  {job.job_number}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        ) : hasAccepted ? (
+          <ReleaseToProductionButton orderId={orderId} />
+        ) : (
+          <p className="text-sm text-muted-foreground">Accept a quotation before releasing this order to production.</p>
+        )}
+      </SectionCard>
 
       <SectionCard title="Activity Timeline">
         <OrderTimeline events={timeline} />
@@ -167,20 +160,6 @@ function Field({ label, value, className }: { label: string; value: string; clas
     <div className={className}>
       <dt className="text-xs font-medium text-muted-foreground">{label}</dt>
       <dd className="text-sm text-foreground">{value}</dd>
-    </div>
-  )
-}
-
-function SummaryRow({ label, value, emphasize }: { label: string; value: string; emphasize?: boolean }) {
-  return (
-    <div
-      className={cn(
-        "flex items-center justify-between",
-        emphasize && "border-t border-border pt-2 font-semibold text-foreground"
-      )}
-    >
-      <span className={emphasize ? undefined : "text-muted-foreground"}>{label}</span>
-      <span>{value}</span>
     </div>
   )
 }

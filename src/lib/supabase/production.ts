@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js"
 
 import { getSettingsBundle } from "@/lib/supabase/settings"
+import { hasAcceptedQuotation } from "@/lib/supabase/quotations"
 import { STAGE_SEQUENCE } from "@/types/production"
 import type {
   EmployeeOption,
@@ -190,6 +191,15 @@ export async function createProductionJob(supabase: SupabaseClient, orderId: str
   if (existingError) throw existingError
 
   const existingByItemId = new Map((existingJobs ?? []).map((job) => [job.order_item_id, job.id as string]))
+
+  // Only gate a genuinely NEW release - an order that already has jobs for
+  // every item (already released, e.g. before this feature existed) must
+  // keep working via this function's existing idempotent re-call behavior.
+  const isNewRelease = itemIds.some((itemId) => !existingByItemId.has(itemId))
+  if (isNewRelease && !(await hasAcceptedQuotation(supabase, orderId))) {
+    throw new Error("Accept a quotation before releasing this order to production.")
+  }
+
   const jobIds: string[] = []
 
   for (const itemId of itemIds) {
