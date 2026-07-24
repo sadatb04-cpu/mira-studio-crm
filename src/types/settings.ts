@@ -98,6 +98,8 @@ export const DEFAULT_USER_PREFERENCES: UserPreferences = {
 export interface BusinessRules {
   defaultTaskPriority: TaskPriority
   defaultProductionPriority: ProductionPriority
+  /** 24-hour "HH:mm" cutoff used by attendance reconciliation to auto-close open sessions and mark absentees. */
+  attendanceCutoffTime: string
 }
 
 // Mirrors the live DB column defaults (tasks.priority / production_jobs.priority)
@@ -105,6 +107,7 @@ export interface BusinessRules {
 export const DEFAULT_BUSINESS_RULES: BusinessRules = {
   defaultTaskPriority: "medium",
   defaultProductionPriority: "normal",
+  attendanceCutoffTime: "18:00",
 }
 
 export interface SettingsBundle {

@@ -55,6 +55,59 @@ export type Database = {
           },
         ]
       }
+      attendance_records: {
+        Row: {
+          check_in: string | null
+          check_out: string | null
+          created_at: string
+          current_segment_started_at: string | null
+          date: string
+          employee_id: string
+          id: string
+          notes: string | null
+          status: Database["public"]["Enums"]["attendance_status"]
+          total_break_seconds: number
+          total_worked_seconds: number
+          updated_at: string
+        }
+        Insert: {
+          check_in?: string | null
+          check_out?: string | null
+          created_at?: string
+          current_segment_started_at?: string | null
+          date: string
+          employee_id: string
+          id?: string
+          notes?: string | null
+          status: Database["public"]["Enums"]["attendance_status"]
+          total_break_seconds?: number
+          total_worked_seconds?: number
+          updated_at?: string
+        }
+        Update: {
+          check_in?: string | null
+          check_out?: string | null
+          created_at?: string
+          current_segment_started_at?: string | null
+          date?: string
+          employee_id?: string
+          id?: string
+          notes?: string | null
+          status?: Database["public"]["Enums"]["attendance_status"]
+          total_break_seconds?: number
+          total_worked_seconds?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attendance_records_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customers: {
         Row: {
           address_line1: string | null
@@ -1104,6 +1157,13 @@ export type Database = {
         Args: never
         Returns: Database["public"]["Enums"]["user_role"]
       }
+      reconcile_attendance: {
+        Args: never
+        Returns: {
+          absences_marked: number
+          sessions_closed: number
+        }[]
+      }
     }
     Enums: {
       activity_entity_type:
@@ -1123,6 +1183,13 @@ export type Database = {
         | "notification"
         | "setting"
         | "document_folder"
+        | "attendance_record"
+      attendance_status:
+        | "working"
+        | "on_break"
+        | "finished"
+        | "absent"
+        | "auto_closed"
       department:
         | "Operations"
         | "Production"
@@ -1382,6 +1449,14 @@ export const Constants = {
         "notification",
         "setting",
         "document_folder",
+        "attendance_record",
+      ],
+      attendance_status: [
+        "working",
+        "on_break",
+        "finished",
+        "absent",
+        "auto_closed",
       ],
       department: [
         "Operations",

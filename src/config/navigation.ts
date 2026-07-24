@@ -9,6 +9,7 @@ import {
   FileText,
   LineChart,
   Settings,
+  Clock,
   LucideIcon,
 } from "lucide-react";
 
@@ -86,6 +87,14 @@ export const navigationItems: NavigationItem[] = [
     href: "/employees",
     icon: Briefcase,
     description: "Manage workforce records, schedules, and permissions.",
+    isEnabled: true,
+  },
+  {
+    id: "attendance",
+    label: "Attendance",
+    href: "/attendance",
+    icon: Clock,
+    description: "Track work sessions, breaks, and daily attendance.",
     isEnabled: true,
   },
   {

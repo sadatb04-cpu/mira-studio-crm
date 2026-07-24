@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 
 import { SectionCard } from "@/components/shared/section-card"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { updateBusinessRules } from "@/app/actions/settings"
 import { PRODUCTION_PRIORITY_LABELS } from "@/types/production"
@@ -86,6 +87,21 @@ export function BusinessRulesCard({ businessRules }: BusinessRulesCardProps) {
               ))}
             </select>
           </div>
+        </div>
+
+        <div className="flex flex-col gap-1.5 border-t border-border pt-4">
+          <Label htmlFor="attendance-cutoff-time">Attendance Cutoff Time</Label>
+          <Input
+            id="attendance-cutoff-time"
+            type="time"
+            value={form.attendanceCutoffTime}
+            onChange={(event) => setForm((current) => ({ ...current, attendanceCutoffTime: event.target.value }))}
+            className="w-auto"
+          />
+          <p className="text-xs text-muted-foreground">
+            Open work sessions still running at this time are automatically closed, and employees who never checked in
+            are marked absent for the day.
+          </p>
         </div>
 
         <div className="flex items-center gap-3 border-t border-border pt-4">

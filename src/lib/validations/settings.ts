@@ -46,6 +46,9 @@ export type UserPreferencesInput = z.infer<typeof userPreferencesSchema>
 export const businessRulesSchema = z.object({
   defaultTaskPriority: z.enum(TASK_PRIORITIES, { error: "Select a default task priority." }),
   defaultProductionPriority: z.enum(PRODUCTION_PRIORITY_VALUES, { error: "Select a default production priority." }),
+  attendanceCutoffTime: z
+    .string()
+    .regex(/^([01]\d|2[0-3]):[0-5]\d$/, { error: "Enter a 24-hour time in HH:mm format." }),
 })
 
 export type BusinessRulesInput = z.infer<typeof businessRulesSchema>
