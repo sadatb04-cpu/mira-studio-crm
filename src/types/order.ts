@@ -211,6 +211,34 @@ export interface OrderDetailCustomer {
   company_name: string | null
   email: string | null
   phone: string | null
+  address_line1: string | null
+  address_line2: string | null
+  city: string | null
+  state: string | null
+  postal_code: string | null
+  country: string | null
+}
+
+// Order Detail page shows this in place of Company (Sales/CAD/Production/
+// Shipping care about where to send the piece, not who bills for it -
+// Company remains untouched in the Customers module itself). Returns lines,
+// not a single string, so the page can reuse the exact same array for both
+// on-screen display and the Copy Address button - display and clipboard
+// content can never drift apart.
+export function formatDeliveryAddress(customer: {
+  address_line1: string | null
+  address_line2: string | null
+  city: string | null
+  state: string | null
+  postal_code: string | null
+  country: string | null
+}): string[] {
+  const cityState = [customer.city, customer.state].filter(Boolean).join(", ")
+  const cityStateLine = [cityState, customer.postal_code].filter(Boolean).join(" ")
+
+  return [customer.address_line1, customer.address_line2, cityStateLine, customer.country]
+    .map((line) => line?.trim())
+    .filter((line): line is string => Boolean(line))
 }
 
 export interface OrderDetail {

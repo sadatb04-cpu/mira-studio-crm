@@ -129,7 +129,7 @@ export async function getOrderById(supabase: SupabaseClient, id: string): Promis
     .from("orders")
     .select(
       `id, order_number, status, order_date, due_date, notes, subtotal, tax, shipping_cost, total, currency, created_at,
-      customer_id, customer:customers(id, full_name, company_name, email, phone),
+      customer_id, customer:customers(id, full_name, company_name, email, phone, address_line1, address_line2, city, state, postal_code, country),
       order_items(id, description, specifications, quantity, unit_price, total_price, created_at),
       order_stones(id, stone_type, shape, quantity, mm_size, carat_weight, color, clarity, notes),
       order_files(id, file_name, file_url, file_type, file_size, created_at, uploader:profiles!order_files_uploaded_by_fkey(full_name))`

@@ -13,13 +13,14 @@ import { OrderTimeline } from "@/components/orders/order-timeline"
 import { OrderWorkflowStepper } from "@/components/orders/order-workflow-stepper"
 import { OrderWorkflowActions } from "@/components/orders/order-workflow-actions"
 import { PricingSection } from "@/components/orders/pricing-section"
+import { CopyAddressButton } from "@/components/orders/copy-address-button"
 import { createClient } from "@/lib/supabase/server"
 import { getOrderById, getOrderTimeline } from "@/lib/supabase/orders"
 import { getQuotationsForOrder } from "@/lib/supabase/quotations"
 import { getProductionJobsForOrder } from "@/lib/supabase/production"
 import { ReleaseToProductionButton } from "@/app/(app)/orders/[id]/release-to-production-button"
 import { formatFileSize } from "@/types/document"
-import { ORDER_STATUS_LABELS } from "@/types/order"
+import { ORDER_STATUS_LABELS, formatDeliveryAddress } from "@/types/order"
 import type { OrderStatus } from "@/types/order"
 
 const STATUS_TONE: Record<OrderStatus, StatusTone> = {
@@ -60,6 +61,7 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
   ])
 
   const hasAccepted = quotations.some((quotation) => quotation.status === "accepted")
+  const addressLines = order.customer ? formatDeliveryAddress(order.customer) : []
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-6">
@@ -89,12 +91,25 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <SectionCard title="Customer">
           {order.customer ? (
-            <dl className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <Field label="Name" value={order.customer.full_name} />
-              <Field label="Company" value={order.customer.company_name ?? "—"} />
-              <Field label="Email" value={order.customer.email ?? "—"} />
-              <Field label="Phone" value={order.customer.phone ?? "—"} />
-            </dl>
+            <div className="flex flex-col gap-4">
+              <dl className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <Field label="Name" value={order.customer.full_name} />
+                <Field label="Email" value={order.customer.email ?? "—"} />
+                <Field label="Phone" value={order.customer.phone ?? "—"} />
+              </dl>
+
+              <div className="flex flex-col gap-1.5 border-t border-border pt-4">
+                <div className="flex items-center justify-between">
+                  <dt className="text-xs font-medium text-muted-foreground">Delivery Address</dt>
+                  <CopyAddressButton addressLines={addressLines} />
+                </div>
+                {addressLines.length > 0 ? (
+                  <dd className="whitespace-pre-line text-sm text-foreground">{addressLines.join("\n")}</dd>
+                ) : (
+                  <dd className="text-sm text-muted-foreground">No delivery address provided.</dd>
+                )}
+              </div>
+            </div>
           ) : (
             <p className="text-sm text-muted-foreground">No customer on file.</p>
           )}
