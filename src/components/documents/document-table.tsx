@@ -68,6 +68,7 @@ export function DocumentTable({ documents }: DocumentTableProps) {
         <thead>
           <tr className="border-b border-border text-left text-xs font-medium text-muted-foreground">
             <th className="px-4 py-2">Description</th>
+            <th className="px-4 py-2">Folder</th>
             <th className="px-4 py-2">Type</th>
             <th className="px-4 py-2">Related Record</th>
             <th className="px-4 py-2">Uploaded By</th>
@@ -97,6 +98,19 @@ export function DocumentTable({ documents }: DocumentTableProps) {
                       <span className="text-xs text-muted-foreground">{document.file_name}</span>
                     </span>
                   </Link>
+                </td>
+                <td className="px-4 py-2.5 text-muted-foreground">
+                  {document.folder ? (
+                    <Link
+                      href={`/documents/folders/${document.folder.id}`}
+                      onClick={(event) => event.stopPropagation()}
+                      className="text-primary hover:underline"
+                    >
+                      {document.folder.name}
+                    </Link>
+                  ) : (
+                    "No Folder"
+                  )}
                 </td>
                 <td className="px-4 py-2.5">
                   <DocumentTypeBadge documentType={document.document_type} />

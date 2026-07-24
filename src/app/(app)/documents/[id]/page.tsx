@@ -7,6 +7,7 @@ import { DocumentPreview } from "@/components/documents/document-preview"
 import { DocumentActions } from "@/components/documents/document-actions"
 import { createClient } from "@/lib/supabase/server"
 import { getDocument } from "@/lib/supabase/documents"
+import { getFolderOptions } from "@/lib/supabase/document-folders"
 
 interface DocumentDetailPageProps {
   params: Promise<{ id: string }>
@@ -22,6 +23,8 @@ export default async function DocumentDetailPage({ params }: DocumentDetailPageP
     notFound()
   }
 
+  const folders = await getFolderOptions(supabase)
+
   return (
     <div className="flex flex-1 flex-col gap-6 p-6">
       <PageHeader
@@ -30,7 +33,12 @@ export default async function DocumentDetailPage({ params }: DocumentDetailPageP
         actions={
           <div className="flex items-center gap-3">
             <DocumentTypeBadge documentType={document.document_type} />
-            <DocumentActions documentId={document.id} fileName={document.file_name} />
+            <DocumentActions
+              documentId={document.id}
+              fileName={document.file_name}
+              currentFolderId={document.folder?.id ?? null}
+              folders={folders}
+            />
           </div>
         }
       />

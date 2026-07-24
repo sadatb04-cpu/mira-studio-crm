@@ -13,6 +13,7 @@ export const documentMetadataSchema = z
     description: z.string().trim().min(1, { error: "Description is required." }),
     relatedRecordType: z.enum(RELATED_RECORD_TYPES).optional(),
     relatedRecordId: z.string().trim().optional(),
+    folderId: z.string().trim().optional(),
   })
   .refine((data) => !data.relatedRecordType || !!data.relatedRecordId, {
     error: "Select a related record.",
@@ -42,6 +43,7 @@ export const createDocumentSchema = z
     description: z.string().trim().min(1, { error: "Description is required." }),
     relatedRecordType: z.enum(RELATED_RECORD_TYPES).optional(),
     relatedRecordId: z.string().trim().optional(),
+    folderId: z.string().trim().optional(),
     fileName: z.string().trim().min(1, { error: "File is required." }),
     fileSize: z
       .number()

@@ -9,6 +9,8 @@ const TYPE_TONE: Record<DocumentType, StatusTone> = {
   cad_file: "neutral",
   image: "neutral",
   shipping_label: "warning",
+  manufacturer_payment: "info",
+  employee_information: "neutral",
   other: "neutral",
 }
 

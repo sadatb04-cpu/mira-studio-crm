@@ -40,6 +40,18 @@ export function DocumentSummaryCard({ document }: DocumentSummaryCardProps) {
             </dd>
           </div>
           <div>
+            <dt className="text-xs font-medium text-muted-foreground">Folder</dt>
+            <dd className="text-sm text-foreground">
+              {document.folder ? (
+                <Link href={`/documents/folders/${document.folder.id}`} className="text-primary hover:underline">
+                  {document.folder.name}
+                </Link>
+              ) : (
+                "No Folder"
+              )}
+            </dd>
+          </div>
+          <div>
             <dt className="text-xs font-medium text-muted-foreground">Related Record</dt>
             <dd className="text-sm text-foreground">
               {relatedHref ? (

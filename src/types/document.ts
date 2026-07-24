@@ -4,6 +4,8 @@ export const DOCUMENT_TYPES = [
   "cad_file",
   "image",
   "shipping_label",
+  "manufacturer_payment",
+  "employee_information",
   "other",
 ] as const
 export type DocumentType = (typeof DOCUMENT_TYPES)[number]
@@ -14,6 +16,8 @@ export const DOCUMENT_TYPE_LABELS: Record<DocumentType, string> = {
   cad_file: "CAD File",
   image: "Image",
   shipping_label: "Shipping Label",
+  manufacturer_payment: "Manufacturer Payment",
+  employee_information: "Employee Information",
   other: "Other",
 }
 
@@ -48,6 +52,26 @@ export interface RelatedRecordOption {
   label: string
 }
 
+export interface FolderOption {
+  id: string
+  name: string
+}
+
+export interface DocumentFolderSummary {
+  id: string
+  name: string
+  description: string | null
+  created_at: string
+  updated_at: string
+  documentCount: number
+  storageBytes: number
+}
+
+export interface DocumentFolderFormInput {
+  name: string
+  description?: string
+}
+
 export interface DocumentRelatedRecord {
   type: RelatedRecordType
   id: string
@@ -66,6 +90,7 @@ export interface DocumentListItem {
   created_at: string
   uploadedByName: string | null
   relatedRecord: DocumentRelatedRecord | null
+  folder: FolderOption | null
 }
 
 export interface DocumentDetail extends DocumentListItem {
@@ -86,6 +111,7 @@ export interface DocumentFormInput {
   description: string
   relatedRecordType?: RelatedRecordType
   relatedRecordId?: string
+  folderId?: string
 }
 
 export function formatFileSize(bytes: number | null): string {

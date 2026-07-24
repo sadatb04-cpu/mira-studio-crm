@@ -17,7 +17,7 @@ const BUCKET = "documents"
 const SIGNED_URL_EXPIRY_SECONDS = 60 * 10
 
 const DOCUMENT_COLUMNS =
-  "id, file_name, description, document_type, file_size, mime_type, file_url, created_at, updated_at, order_id, customer_id, production_job_id, uploaded_by"
+  "id, file_name, description, document_type, file_size, mime_type, file_url, created_at, updated_at, order_id, customer_id, production_job_id, folder_id, uploaded_by"
 
 interface RawDocumentRow {
   id: string
@@ -32,6 +32,7 @@ interface RawDocumentRow {
   order_id: string | null
   customer_id: string | null
   production_job_id: string | null
+  folder_id: string | null
   uploaded_by: string | null
   uploader: { full_name: string } | null
 }
@@ -42,6 +43,8 @@ interface GetDocumentsFilters {
   uploadedBy?: string
   relatedType?: RelatedRecordType
   uploadedAfter?: string
+  folderId?: string
+  onlyUngrouped?: boolean
 }
 
 async function resolveRelatedRecordMaps(
@@ -95,7 +98,24 @@ function buildRelatedRecord(
   return null
 }
 
-function toListItem(row: RawDocumentRow, maps: Awaited<ReturnType<typeof resolveRelatedRecordMaps>>): DocumentListItem {
+async function resolveFolderMap(
+  supabase: SupabaseClient,
+  rows: Pick<RawDocumentRow, "folder_id">[]
+): Promise<Map<string, string>> {
+  const folderIds = [...new Set(rows.filter((row) => row.folder_id).map((row) => row.folder_id as string))]
+  if (folderIds.length === 0) return new Map()
+
+  const { data, error } = await supabase.from("document_folders").select("id, name").in("id", folderIds)
+  if (error) throw error
+
+  return new Map((data ?? []).map((row) => [row.id, row.name]))
+}
+
+function toListItem(
+  row: RawDocumentRow,
+  maps: Awaited<ReturnType<typeof resolveRelatedRecordMaps>>,
+  folderMap: Map<string, string>
+): DocumentListItem {
   return {
     id: row.id,
     description: row.description,
@@ -106,6 +126,7 @@ function toListItem(row: RawDocumentRow, maps: Awaited<ReturnType<typeof resolve
     created_at: row.created_at,
     uploadedByName: row.uploader?.full_name ?? null,
     relatedRecord: buildRelatedRecord(row, maps),
+    folder: row.folder_id ? { id: row.folder_id, name: folderMap.get(row.folder_id) ?? row.folder_id } : null,
   }
 }
 
@@ -140,23 +161,49 @@ export async function getDocuments(
     query = query.not(column, "is", null)
   }
 
+  if (filters.folderId) {
+    query = query.eq("folder_id", filters.folderId)
+  } else if (filters.onlyUngrouped) {
+    query = query.is("folder_id", null)
+  }
+
   if (filters.search) {
     // Description is listed first since it's the primary, human-recognized
-    // identifier - filename is still searched too, just secondary. This is
-    // a plain OR match (either field can hit), not a ranked/relevance
-    // search - there's no ranking infrastructure in this simple filter to
-    // make one field's match outrank the other's in the result order.
+    // identifier - filename and folder name are searched too, just
+    // secondary. This is a plain OR match (any field can hit), not a
+    // ranked/relevance search - there's no ranking infrastructure in this
+    // simple filter to make one field's match outrank another's in the
+    // result order.
+    //
+    // Folder name lives on a joined table, so PostgREST's .or() can't
+    // reference it directly alongside the base table's columns in one
+    // expression. Resolving matching folder ids in a separate query first
+    // (and OR-ing them in as `folder_id.in.(...)`) keeps this consistent
+    // with the "fetch simple, combine in JS" approach already used
+    // elsewhere in this module, instead of relying on an embedded-resource
+    // filter whose exact syntax/behavior isn't guaranteed here.
     const pattern = `%${filters.search}%`
-    query = query.or(`description.ilike.${pattern},file_name.ilike.${pattern}`)
+    const { data: matchingFolders, error: folderSearchError } = await supabase
+      .from("document_folders")
+      .select("id")
+      .ilike("name", pattern)
+    if (folderSearchError) throw folderSearchError
+
+    const orParts = [`description.ilike.${pattern}`, `file_name.ilike.${pattern}`]
+    const folderIds = (matchingFolders ?? []).map((row) => row.id)
+    if (folderIds.length > 0) {
+      orParts.push(`folder_id.in.(${folderIds.join(",")})`)
+    }
+    query = query.or(orParts.join(","))
   }
 
   const { data, error } = await query
   if (error) throw error
 
   const rows = (data ?? []) as unknown as RawDocumentRow[]
-  const maps = await resolveRelatedRecordMaps(supabase, rows)
+  const [maps, folderMap] = await Promise.all([resolveRelatedRecordMaps(supabase, rows), resolveFolderMap(supabase, rows)])
 
-  return rows.map((row) => toListItem(row, maps))
+  return rows.map((row) => toListItem(row, maps, folderMap))
 }
 
 export async function getDocumentStats(supabase: SupabaseClient): Promise<DocumentStats> {
@@ -187,7 +234,7 @@ export async function getDocument(supabase: SupabaseClient, id: string): Promise
   if (!data) return null
 
   const row = data as unknown as RawDocumentRow
-  const maps = await resolveRelatedRecordMaps(supabase, [row])
+  const [maps, folderMap] = await Promise.all([resolveRelatedRecordMaps(supabase, [row]), resolveFolderMap(supabase, [row])])
 
   let signedUrl: string | null = null
   const signedUrlResult = await supabase.storage.from(BUCKET).createSignedUrl(row.file_url, SIGNED_URL_EXPIRY_SECONDS)
@@ -196,7 +243,7 @@ export async function getDocument(supabase: SupabaseClient, id: string): Promise
   }
 
   return {
-    ...toListItem(row, maps),
+    ...toListItem(row, maps, folderMap),
     file_url: row.file_url,
     updated_at: row.updated_at,
     signedUrl,
@@ -260,6 +307,7 @@ export async function createDocumentRecord(supabase: SupabaseClient, input: Crea
       order_id: input.relatedRecordType === "order" ? input.relatedRecordId : null,
       customer_id: input.relatedRecordType === "customer" ? input.relatedRecordId : null,
       production_job_id: input.relatedRecordType === "production_job" ? input.relatedRecordId : null,
+      folder_id: input.folderId || null,
       uploaded_by: user?.id ?? null,
     })
     .select("id")

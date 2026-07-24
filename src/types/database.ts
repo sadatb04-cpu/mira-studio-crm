@@ -109,6 +109,41 @@ export type Database = {
         }
         Relationships: []
       }
+      document_folders: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_folders_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       documents: {
         Row: {
           created_at: string
@@ -118,6 +153,7 @@ export type Database = {
           file_name: string
           file_size: number | null
           file_url: string
+          folder_id: string | null
           id: string
           mime_type: string | null
           order_id: string | null
@@ -134,6 +170,7 @@ export type Database = {
           file_name: string
           file_size?: number | null
           file_url: string
+          folder_id?: string | null
           id?: string
           mime_type?: string | null
           order_id?: string | null
@@ -150,6 +187,7 @@ export type Database = {
           file_name?: string
           file_size?: number | null
           file_url?: string
+          folder_id?: string | null
           id?: string
           mime_type?: string | null
           order_id?: string | null
@@ -164,6 +202,13 @@ export type Database = {
             columns: ["customer_id"]
             isOneToOne: false
             referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "documents_folder_id_fkey"
+            columns: ["folder_id"]
+            isOneToOne: false
+            referencedRelation: "document_folders"
             referencedColumns: ["id"]
           },
           {
@@ -1077,6 +1122,7 @@ export type Database = {
         | "document"
         | "notification"
         | "setting"
+        | "document_folder"
       department:
         | "Operations"
         | "Production"
@@ -1090,6 +1136,8 @@ export type Database = {
         | "image"
         | "shipping_label"
         | "other"
+        | "manufacturer_payment"
+        | "employee_information"
       employment_status: "active" | "on_leave" | "terminated"
       inventory_category:
         | "gold"
@@ -1333,6 +1381,7 @@ export const Constants = {
         "document",
         "notification",
         "setting",
+        "document_folder",
       ],
       department: [
         "Operations",
@@ -1348,6 +1397,8 @@ export const Constants = {
         "image",
         "shipping_label",
         "other",
+        "manufacturer_payment",
+        "employee_information",
       ],
       employment_status: ["active", "on_leave", "terminated"],
       inventory_category: [
