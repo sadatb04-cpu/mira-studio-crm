@@ -67,7 +67,7 @@ export function DocumentTable({ documents }: DocumentTableProps) {
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b border-border text-left text-xs font-medium text-muted-foreground">
-            <th className="px-4 py-2">File</th>
+            <th className="px-4 py-2">Description</th>
             <th className="px-4 py-2">Type</th>
             <th className="px-4 py-2">Related Record</th>
             <th className="px-4 py-2">Uploaded By</th>
@@ -85,14 +85,17 @@ export function DocumentTable({ documents }: DocumentTableProps) {
                 onClick={() => router.push(`/documents/${document.id}`)}
                 className="cursor-pointer border-b border-border last:border-0 hover:bg-muted/50"
               >
-                <td className="px-4 py-2.5 font-medium text-foreground">
+                <td className="px-4 py-2.5">
                   <Link
                     href={`/documents/${document.id}`}
                     onClick={(event) => event.stopPropagation()}
-                    className="flex items-center gap-2 hover:underline"
+                    className="flex items-start gap-2 hover:underline"
                   >
                     <FileIcon mimeType={document.mime_type} />
-                    {document.file_name}
+                    <span className="flex flex-col">
+                      <span className="font-medium text-foreground">{document.description ?? "No description"}</span>
+                      <span className="text-xs text-muted-foreground">{document.file_name}</span>
+                    </span>
                   </Link>
                 </td>
                 <td className="px-4 py-2.5">

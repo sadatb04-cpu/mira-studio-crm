@@ -56,6 +56,9 @@ export interface DocumentRelatedRecord {
 
 export interface DocumentListItem {
   id: string
+  /** Human-readable label - the primary identifier shown throughout the module (see design goal: read like an operations log, not a file explorer). */
+  description: string | null
+  /** The original uploaded filename - never overwritten, still shown (in muted text) for downloads/auditing. */
   file_name: string
   document_type: DocumentType
   file_size: number | null
@@ -67,7 +70,6 @@ export interface DocumentListItem {
 
 export interface DocumentDetail extends DocumentListItem {
   file_url: string
-  notes: string | null
   updated_at: string
   signedUrl: string | null
 }
@@ -81,7 +83,7 @@ export interface DocumentStats {
 
 export interface DocumentFormInput {
   documentType: DocumentType
-  notes?: string
+  description: string
   relatedRecordType?: RelatedRecordType
   relatedRecordId?: string
 }

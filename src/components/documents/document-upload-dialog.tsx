@@ -44,7 +44,7 @@ export function DocumentUploadDialog({ orders, customers, productionJobs }: Docu
   const [open, setOpen] = useState(false)
   const [file, setFile] = useState<File | null>(null)
   const [documentType, setDocumentType] = useState<DocumentType>("other")
-  const [notes, setNotes] = useState("")
+  const [description, setDescription] = useState("")
   const [relatedRecordType, setRelatedRecordType] = useState<RelatedRecordType | "">("")
   const [relatedRecordId, setRelatedRecordId] = useState("")
   const [error, setError] = useState<string | null>(null)
@@ -57,7 +57,7 @@ export function DocumentUploadDialog({ orders, customers, productionJobs }: Docu
   function reset() {
     setFile(null)
     setDocumentType("other")
-    setNotes("")
+    setDescription("")
     setRelatedRecordType("")
     setRelatedRecordId("")
     setError(null)
@@ -68,6 +68,11 @@ export function DocumentUploadDialog({ orders, customers, productionJobs }: Docu
 
     if (!file) {
       setError("File is required.")
+      return
+    }
+
+    if (description.trim() === "") {
+      setError("Description is required.")
       return
     }
 
@@ -109,7 +114,7 @@ export function DocumentUploadDialog({ orders, customers, productionJobs }: Docu
 
       const result = await createDocument({
         documentType,
-        notes: notes || undefined,
+        description,
         relatedRecordType: relatedRecordType || undefined,
         relatedRecordId: relatedRecordType ? relatedRecordId : undefined,
         fileName: file.name,
@@ -185,14 +190,16 @@ export function DocumentUploadDialog({ orders, customers, productionJobs }: Docu
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="notes">Description</Label>
+            <Label htmlFor="description">
+              Document Description<span className="text-destructive">*</span>
+            </Label>
             <textarea
-              id="notes"
-              value={notes}
-              onChange={(event) => setNotes(event.target.value)}
+              id="description"
+              value={description}
+              onChange={(event) => setDescription(event.target.value)}
               rows={3}
               className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground shadow-xs outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30"
-              placeholder="Optional notes about this document..."
+              placeholder="e.g. Payment receipt sent to manufacturer"
             />
           </div>
 

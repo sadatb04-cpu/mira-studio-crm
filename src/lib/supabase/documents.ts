@@ -17,15 +17,15 @@ const BUCKET = "documents"
 const SIGNED_URL_EXPIRY_SECONDS = 60 * 10
 
 const DOCUMENT_COLUMNS =
-  "id, file_name, document_type, file_size, mime_type, notes, file_url, created_at, updated_at, order_id, customer_id, production_job_id, uploaded_by"
+  "id, file_name, description, document_type, file_size, mime_type, file_url, created_at, updated_at, order_id, customer_id, production_job_id, uploaded_by"
 
 interface RawDocumentRow {
   id: string
   file_name: string
+  description: string | null
   document_type: DocumentType
   file_size: number | null
   mime_type: string | null
-  notes: string | null
   file_url: string
   created_at: string
   updated_at: string
@@ -98,6 +98,7 @@ function buildRelatedRecord(
 function toListItem(row: RawDocumentRow, maps: Awaited<ReturnType<typeof resolveRelatedRecordMaps>>): DocumentListItem {
   return {
     id: row.id,
+    description: row.description,
     file_name: row.file_name,
     document_type: row.document_type,
     file_size: row.file_size,
@@ -140,8 +141,13 @@ export async function getDocuments(
   }
 
   if (filters.search) {
+    // Description is listed first since it's the primary, human-recognized
+    // identifier - filename is still searched too, just secondary. This is
+    // a plain OR match (either field can hit), not a ranked/relevance
+    // search - there's no ranking infrastructure in this simple filter to
+    // make one field's match outrank the other's in the result order.
     const pattern = `%${filters.search}%`
-    query = query.or(`file_name.ilike.${pattern},notes.ilike.${pattern}`)
+    query = query.or(`description.ilike.${pattern},file_name.ilike.${pattern}`)
   }
 
   const { data, error } = await query
@@ -192,7 +198,6 @@ export async function getDocument(supabase: SupabaseClient, id: string): Promise
   return {
     ...toListItem(row, maps),
     file_url: row.file_url,
-    notes: row.notes,
     updated_at: row.updated_at,
     signedUrl,
   }
@@ -247,11 +252,11 @@ export async function createDocumentRecord(supabase: SupabaseClient, input: Crea
     .from("documents")
     .insert({
       file_name: input.fileName,
+      description: input.description,
       document_type: input.documentType,
       file_size: input.fileSize,
       mime_type: input.mimeType,
       file_url: input.storagePath,
-      notes: input.notes || null,
       order_id: input.relatedRecordType === "order" ? input.relatedRecordId : null,
       customer_id: input.relatedRecordType === "customer" ? input.relatedRecordId : null,
       production_job_id: input.relatedRecordType === "production_job" ? input.relatedRecordId : null,

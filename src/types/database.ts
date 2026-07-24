@@ -113,13 +113,13 @@ export type Database = {
         Row: {
           created_at: string
           customer_id: string | null
+          description: string | null
           document_type: Database["public"]["Enums"]["document_type"]
           file_name: string
           file_size: number | null
           file_url: string
           id: string
           mime_type: string | null
-          notes: string | null
           order_id: string | null
           order_item_id: string | null
           production_job_id: string | null
@@ -129,13 +129,13 @@ export type Database = {
         Insert: {
           created_at?: string
           customer_id?: string | null
+          description?: string | null
           document_type: Database["public"]["Enums"]["document_type"]
           file_name: string
           file_size?: number | null
           file_url: string
           id?: string
           mime_type?: string | null
-          notes?: string | null
           order_id?: string | null
           order_item_id?: string | null
           production_job_id?: string | null
@@ -145,13 +145,13 @@ export type Database = {
         Update: {
           created_at?: string
           customer_id?: string | null
+          description?: string | null
           document_type?: Database["public"]["Enums"]["document_type"]
           file_name?: string
           file_size?: number | null
           file_url?: string
           id?: string
           mime_type?: string | null
-          notes?: string | null
           order_id?: string | null
           order_item_id?: string | null
           production_job_id?: string | null

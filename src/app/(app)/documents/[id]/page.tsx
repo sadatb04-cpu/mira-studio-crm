@@ -25,8 +25,8 @@ export default async function DocumentDetailPage({ params }: DocumentDetailPageP
   return (
     <div className="flex flex-1 flex-col gap-6 p-6">
       <PageHeader
-        title={document.file_name}
-        description="Document"
+        title={document.description ?? "No description"}
+        description={document.file_name}
         actions={
           <div className="flex items-center gap-3">
             <DocumentTypeBadge documentType={document.document_type} />

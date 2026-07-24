@@ -10,7 +10,7 @@ import {
 export const documentMetadataSchema = z
   .object({
     documentType: z.enum(DOCUMENT_TYPES, { error: "Select a document type." }),
-    notes: z.string().trim().optional(),
+    description: z.string().trim().min(1, { error: "Description is required." }),
     relatedRecordType: z.enum(RELATED_RECORD_TYPES).optional(),
     relatedRecordId: z.string().trim().optional(),
   })
@@ -39,7 +39,7 @@ export type DocumentFileInput = z.infer<typeof documentFileSchema>
 export const createDocumentSchema = z
   .object({
     documentType: z.enum(DOCUMENT_TYPES, { error: "Select a document type." }),
-    notes: z.string().trim().optional(),
+    description: z.string().trim().min(1, { error: "Description is required." }),
     relatedRecordType: z.enum(RELATED_RECORD_TYPES).optional(),
     relatedRecordId: z.string().trim().optional(),
     fileName: z.string().trim().min(1, { error: "File is required." }),
