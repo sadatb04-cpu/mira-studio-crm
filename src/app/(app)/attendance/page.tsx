@@ -4,6 +4,7 @@ import { redirect } from "next/navigation"
 import { PageHeader } from "@/components/shared/page-header"
 import { SectionCard } from "@/components/shared/section-card"
 import { AttendanceTimerWidget } from "@/components/attendance/attendance-timer-widget"
+import { SessionHistoryList } from "@/components/attendance/session-history-list"
 import { AttendanceSummaryCards } from "@/components/attendance/attendance-summary-cards"
 import { AttendanceFilters } from "@/components/attendance/attendance-filters"
 import { AttendanceHistoryTable } from "@/components/attendance/attendance-history-table"
@@ -15,7 +16,7 @@ import {
   getAttendanceEmployeeOptions,
   getAttendanceHistory,
   getLinkedEmployeeId,
-  getTodayAttendance,
+  getTodaySessions,
   reconcileAttendance,
 } from "@/lib/supabase/attendance"
 import { resolveDateRange } from "@/lib/supabase/reports"
@@ -58,7 +59,7 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
 
   const linkedEmployeeId = await getLinkedEmployeeId(supabase, user.id)
   const hasEmployeeRecord = linkedEmployeeId !== null
-  const todayRecord = linkedEmployeeId ? await getTodayAttendance(supabase, linkedEmployeeId) : null
+  const todaySessions = linkedEmployeeId ? await getTodaySessions(supabase, linkedEmployeeId) : []
 
   let managerSection: ReactNode = null
 
@@ -104,7 +105,10 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
       />
 
       {hasEmployeeRecord ? (
-        <AttendanceTimerWidget record={todayRecord} />
+        <>
+          <AttendanceTimerWidget sessions={todaySessions} />
+          <SessionHistoryList sessions={todaySessions} />
+        </>
       ) : (
         <SectionCard title="My Attendance">
           <p className="text-sm text-muted-foreground">

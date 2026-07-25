@@ -49,3 +49,14 @@ export function formatDuration(totalSeconds: number): string {
   const minutes = Math.floor((safeSeconds % 3600) / 60)
   return `${hours}h ${minutes}m`
 }
+
+// A live, second-precision "00:37:18" clock face - used for the
+// prominent Current Session timer, distinct from formatDuration()'s
+// human-readable "1h 15m" used for accumulated totals.
+export function formatClock(totalSeconds: number): string {
+  const safeSeconds = Math.max(0, Math.floor(totalSeconds))
+  const hours = Math.floor(safeSeconds / 3600)
+  const minutes = Math.floor((safeSeconds % 3600) / 60)
+  const seconds = safeSeconds % 60
+  return [hours, minutes, seconds].map((value) => String(value).padStart(2, "0")).join(":")
+}

@@ -77,12 +77,37 @@ export async function getLinkedEmployeeId(supabase: SupabaseClient, profileId: s
   return data?.id ?? null
 }
 
-export async function getTodayAttendance(supabase: SupabaseClient, employeeId: string): Promise<AttendanceRecord | null> {
+// Every session row for today, oldest first - the full "Today's Sessions"
+// history. An employee can have any number of these (Start Work -> Finish
+// -> Start New Session -> ...); each is its own independent row.
+export async function getTodaySessions(supabase: SupabaseClient, employeeId: string): Promise<AttendanceRecord[]> {
   const { data, error } = await supabase
     .from("attendance_records")
     .select(ATTENDANCE_COLUMNS)
     .eq("employee_id", employeeId)
     .eq("date", todayIso())
+    .order("check_in", { ascending: true })
+
+  if (error) throw error
+
+  const rows = (data ?? []) as unknown as RawAttendanceRow[]
+  const names = await resolveEmployeeNames(supabase, [employeeId])
+  const employeeName = names.get(employeeId) ?? ""
+
+  return rows.map((row) => toRecord(row, employeeName))
+}
+
+// The most recent session for today, whatever its status - this is the
+// one clock actions operate on (start a break/resume/finish always acts
+// on the latest session, never an earlier finished one).
+async function getActiveSession(supabase: SupabaseClient, employeeId: string): Promise<AttendanceRecord | null> {
+  const { data, error } = await supabase
+    .from("attendance_records")
+    .select(ATTENDANCE_COLUMNS)
+    .eq("employee_id", employeeId)
+    .eq("date", todayIso())
+    .order("check_in", { ascending: false })
+    .limit(1)
     .maybeSingle()
 
   if (error) throw error
@@ -108,7 +133,15 @@ async function logActivity(supabase: SupabaseClient, entry: { entity_id: string;
   })
 }
 
+// Also used for "Start New Session" - the button label differs client-side
+// depending on whether any session already exists today, but the
+// underlying action (a fresh session row) is identical either way.
 export async function startWork(supabase: SupabaseClient, employeeId: string): Promise<void> {
+  const active = await getActiveSession(supabase, employeeId)
+  if (active && (active.status === "working" || active.status === "on_break")) {
+    throw new Error("You already have an active session.")
+  }
+
   const now = new Date().toISOString()
 
   const { data, error } = await supabase
@@ -123,34 +156,31 @@ export async function startWork(supabase: SupabaseClient, employeeId: string): P
     .select("id")
     .single()
 
-  if (error) {
-    if (error.code === "23505") throw new Error("You've already started work today.")
-    throw error
-  }
+  if (error) throw error
 
   await logActivity(supabase, { entity_id: data.id as string, action: "started_work", description: "Started work." })
 }
 
 export async function startBreak(supabase: SupabaseClient, employeeId: string): Promise<void> {
-  const record = await getTodayAttendance(supabase, employeeId)
-  if (!record || record.status !== "working") {
+  const session = await getActiveSession(supabase, employeeId)
+  if (!session || session.status !== "working") {
     throw new Error("Start work before taking a break.")
   }
 
   const now = new Date()
   const elapsedSeconds = Math.max(
     0,
-    Math.floor((now.getTime() - new Date(record.currentSegmentStartedAt as string).getTime()) / 1000)
+    Math.floor((now.getTime() - new Date(session.currentSegmentStartedAt as string).getTime()) / 1000)
   )
 
   const { data, error } = await supabase
     .from("attendance_records")
     .update({
       status: "on_break",
-      total_worked_seconds: record.totalWorkedSeconds + elapsedSeconds,
+      total_worked_seconds: session.totalWorkedSeconds + elapsedSeconds,
       current_segment_started_at: now.toISOString(),
     })
-    .eq("id", record.id)
+    .eq("id", session.id)
     .eq("status", "working")
     .select("id")
     .maybeSingle()
@@ -158,29 +188,29 @@ export async function startBreak(supabase: SupabaseClient, employeeId: string): 
   if (error) throw error
   if (!data) throw new Error("Unable to start a break right now - refresh and try again.")
 
-  await logActivity(supabase, { entity_id: record.id, action: "started_break", description: "Started a break." })
+  await logActivity(supabase, { entity_id: session.id, action: "started_break", description: "Started a break." })
 }
 
 export async function resumeWork(supabase: SupabaseClient, employeeId: string): Promise<void> {
-  const record = await getTodayAttendance(supabase, employeeId)
-  if (!record || record.status !== "on_break") {
+  const session = await getActiveSession(supabase, employeeId)
+  if (!session || session.status !== "on_break") {
     throw new Error("Start a break before you can resume work.")
   }
 
   const now = new Date()
   const elapsedSeconds = Math.max(
     0,
-    Math.floor((now.getTime() - new Date(record.currentSegmentStartedAt as string).getTime()) / 1000)
+    Math.floor((now.getTime() - new Date(session.currentSegmentStartedAt as string).getTime()) / 1000)
   )
 
   const { data, error } = await supabase
     .from("attendance_records")
     .update({
       status: "working",
-      total_break_seconds: record.totalBreakSeconds + elapsedSeconds,
+      total_break_seconds: session.totalBreakSeconds + elapsedSeconds,
       current_segment_started_at: now.toISOString(),
     })
-    .eq("id", record.id)
+    .eq("id", session.id)
     .eq("status", "on_break")
     .select("id")
     .maybeSingle()
@@ -188,25 +218,25 @@ export async function resumeWork(supabase: SupabaseClient, employeeId: string): 
   if (error) throw error
   if (!data) throw new Error("Unable to resume work right now - refresh and try again.")
 
-  await logActivity(supabase, { entity_id: record.id, action: "resumed_work", description: "Resumed work." })
+  await logActivity(supabase, { entity_id: session.id, action: "resumed_work", description: "Resumed work." })
 }
 
 export async function endWork(supabase: SupabaseClient, employeeId: string): Promise<void> {
-  const record = await getTodayAttendance(supabase, employeeId)
-  if (!record || (record.status !== "working" && record.status !== "on_break")) {
+  const session = await getActiveSession(supabase, employeeId)
+  if (!session || (session.status !== "working" && session.status !== "on_break")) {
     throw new Error("There is no active work session to end.")
   }
 
   const now = new Date()
   const elapsedSeconds = Math.max(
     0,
-    Math.floor((now.getTime() - new Date(record.currentSegmentStartedAt as string).getTime()) / 1000)
+    Math.floor((now.getTime() - new Date(session.currentSegmentStartedAt as string).getTime()) / 1000)
   )
 
   const update =
-    record.status === "working"
-      ? { total_worked_seconds: record.totalWorkedSeconds + elapsedSeconds, total_break_seconds: record.totalBreakSeconds }
-      : { total_break_seconds: record.totalBreakSeconds + elapsedSeconds, total_worked_seconds: record.totalWorkedSeconds }
+    session.status === "working"
+      ? { total_worked_seconds: session.totalWorkedSeconds + elapsedSeconds, total_break_seconds: session.totalBreakSeconds }
+      : { total_break_seconds: session.totalBreakSeconds + elapsedSeconds, total_worked_seconds: session.totalWorkedSeconds }
 
   const { data, error } = await supabase
     .from("attendance_records")
@@ -216,7 +246,7 @@ export async function endWork(supabase: SupabaseClient, employeeId: string): Pro
       check_out: now.toISOString(),
       current_segment_started_at: null,
     })
-    .eq("id", record.id)
+    .eq("id", session.id)
     .in("status", ["working", "on_break"])
     .select("id")
     .maybeSingle()
@@ -224,20 +254,36 @@ export async function endWork(supabase: SupabaseClient, employeeId: string): Pro
   if (error) throw error
   if (!data) throw new Error("Unable to end work right now - refresh and try again.")
 
-  await logActivity(supabase, { entity_id: record.id, action: "ended_work", description: "Ended work for the day." })
+  await logActivity(supabase, { entity_id: session.id, action: "ended_work", description: "Ended this session." })
 }
 
 export async function getAttendanceDashboardSummary(supabase: SupabaseClient): Promise<AttendanceDashboardSummary> {
-  const { data, error } = await supabase.from("attendance_records").select("status").eq("date", todayIso())
+  const { data, error } = await supabase
+    .from("attendance_records")
+    .select("employee_id, status, check_in")
+    .eq("date", todayIso())
+    .order("check_in", { ascending: false })
+
   if (error) throw error
 
-  const rows = data ?? []
+  // An employee can have several session rows for today - the dashboard
+  // reflects each EMPLOYEE's current state once, using their most recent
+  // session (rows already ordered latest-first, so the first row seen per
+  // employee_id wins).
+  const latestPerEmployee = new Map<string, AttendanceStatus>()
+  for (const row of data ?? []) {
+    if (!latestPerEmployee.has(row.employee_id)) {
+      latestPerEmployee.set(row.employee_id, row.status)
+    }
+  }
+
+  const statuses = [...latestPerEmployee.values()]
   return {
-    working: rows.filter((row) => row.status === "working").length,
-    onBreak: rows.filter((row) => row.status === "on_break").length,
-    finished: rows.filter((row) => row.status === "finished").length,
-    absent: rows.filter((row) => row.status === "absent").length,
-    autoClosed: rows.filter((row) => row.status === "auto_closed").length,
+    working: statuses.filter((status) => status === "working").length,
+    onBreak: statuses.filter((status) => status === "on_break").length,
+    finished: statuses.filter((status) => status === "finished").length,
+    absent: statuses.filter((status) => status === "absent").length,
+    autoClosed: statuses.filter((status) => status === "auto_closed").length,
   }
 }
 
@@ -252,11 +298,18 @@ export async function getAttendanceEmployeeOptions(supabase: SupabaseClient): Pr
     .sort((a, b) => a.name.localeCompare(b.name))
 }
 
+// Each row is one session, so a single employee/day can now legitimately
+// appear as multiple rows here - that's intentional (a manager reviewing
+// history can see individual sessions, useful for split-shift employees).
 export async function getAttendanceHistory(
   supabase: SupabaseClient,
   filters: AttendanceHistoryFilters = {}
 ): Promise<AttendanceRecord[]> {
-  let query = supabase.from("attendance_records").select(ATTENDANCE_COLUMNS).order("date", { ascending: false })
+  let query = supabase
+    .from("attendance_records")
+    .select(ATTENDANCE_COLUMNS)
+    .order("date", { ascending: false })
+    .order("check_in", { ascending: false })
 
   if (filters.employeeId) query = query.eq("employee_id", filters.employeeId)
   if (filters.status) query = query.eq("status", filters.status)

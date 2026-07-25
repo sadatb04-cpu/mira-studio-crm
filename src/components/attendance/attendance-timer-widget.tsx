@@ -9,20 +9,28 @@ import { Button } from "@/components/ui/button"
 import { SectionCard } from "@/components/shared/section-card"
 import { AttendanceStatusBadge } from "@/components/attendance/attendance-status-badge"
 import { endWork, resumeWork, startBreak, startWork } from "@/app/actions/attendance"
-import { formatDuration } from "@/types/attendance"
+import { formatClock, formatDuration } from "@/types/attendance"
 import type { AttendanceRecord } from "@/types/attendance"
 
 interface AttendanceTimerWidgetProps {
-  record: AttendanceRecord | null
+  sessions: AttendanceRecord[]
 }
 
-export function AttendanceTimerWidget({ record }: AttendanceTimerWidgetProps) {
+export function AttendanceTimerWidget({ sessions }: AttendanceTimerWidgetProps) {
   const router = useRouter()
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
   const [now, setNow] = useState(() => Date.now())
 
-  const isLive = record?.status === "working" || record?.status === "on_break"
+  // An auto-inserted "absent" row (no check-in ever happened) isn't a real
+  // session - exclude it from the count/summary/button-label logic below,
+  // even though it can legitimately be today's only row if reconciliation
+  // already ran past the cutoff with nothing recorded.
+  const realSessions = sessions.filter((session) => session.status !== "absent")
+  const latest = realSessions.length > 0 ? realSessions[realSessions.length - 1] : null
+  const isWorking = latest?.status === "working"
+  const isOnBreak = latest?.status === "on_break"
+  const isLive = isWorking || isOnBreak
 
   useEffect(() => {
     if (!isLive) return
@@ -31,11 +39,16 @@ export function AttendanceTimerWidget({ record }: AttendanceTimerWidgetProps) {
   }, [isLive])
 
   const segmentElapsedSeconds =
-    isLive && record?.currentSegmentStartedAt ? Math.max(0, Math.floor((now - new Date(record.currentSegmentStartedAt).getTime()) / 1000)) : 0
+    isLive && latest?.currentSegmentStartedAt ? Math.max(0, Math.floor((now - new Date(latest.currentSegmentStartedAt).getTime()) / 1000)) : 0
 
-  const currentSessionSeconds = isLive ? segmentElapsedSeconds : null
-  const workedSeconds = (record?.totalWorkedSeconds ?? 0) + (record?.status === "working" ? segmentElapsedSeconds : 0)
-  const breakSeconds = (record?.totalBreakSeconds ?? 0) + (record?.status === "on_break" ? segmentElapsedSeconds : 0)
+  // The prominent "Current Session" clock tracks only this session's own
+  // WORK time - it freezes the instant a break starts and resumes exactly
+  // where it left off, rather than ticking through the break too.
+  const currentSessionSeconds = latest ? latest.totalWorkedSeconds + (isWorking ? segmentElapsedSeconds : 0) : 0
+
+  const firstCheckIn = realSessions.length > 0 ? realSessions[0].checkIn : null
+  const totalWorkedSeconds = realSessions.reduce((sum, s) => sum + s.totalWorkedSeconds, 0) + (isWorking ? segmentElapsedSeconds : 0)
+  const totalBreakSeconds = realSessions.reduce((sum, s) => sum + s.totalBreakSeconds, 0) + (isOnBreak ? segmentElapsedSeconds : 0)
 
   function run(action: () => Promise<{ error?: string }>) {
     setError(null)
@@ -51,43 +64,51 @@ export function AttendanceTimerWidget({ record }: AttendanceTimerWidgetProps) {
 
   return (
     <SectionCard title="My Attendance" description="Start, pause, and end your workday.">
-      <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-5">
+        {isLive && (
+          <div className="flex flex-col items-center gap-1 rounded-2xl border border-border bg-muted/30 py-6">
+            <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Current Session</p>
+            <p className="text-5xl font-semibold tabular-nums text-foreground">{formatClock(currentSessionSeconds)}</p>
+            {isOnBreak && <p className="text-xs font-medium text-muted-foreground">Paused for break</p>}
+          </div>
+        )}
+
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-5">
           <div>
             <p className="text-xs font-medium text-muted-foreground">Current Status</p>
             <div className="mt-1">
-              {record ? <AttendanceStatusBadge status={record.status} /> : <span className="text-sm text-foreground">Not Started</span>}
+              {latest ? <AttendanceStatusBadge status={latest.status} /> : <span className="text-sm text-foreground">Not Started</span>}
             </div>
           </div>
           <div>
             <p className="text-xs font-medium text-muted-foreground">Check In</p>
-            <p className="mt-1 text-sm text-foreground">{record?.checkIn ? format(new Date(record.checkIn), "h:mm a") : "—"}</p>
-          </div>
-          <div>
-            <p className="text-xs font-medium text-muted-foreground">Current Session Time</p>
-            <p className="mt-1 text-sm font-medium tabular-nums text-foreground">
-              {currentSessionSeconds !== null ? formatDuration(currentSessionSeconds) : "—"}
-            </p>
+            <p className="mt-1 text-sm text-foreground">{firstCheckIn ? format(new Date(firstCheckIn), "MMM d, yyyy '•' h:mm a") : "—"}</p>
           </div>
           <div>
             <p className="text-xs font-medium text-muted-foreground">Break Time</p>
-            <p className="mt-1 text-sm font-medium tabular-nums text-foreground">{formatDuration(breakSeconds)}</p>
+            <p className="mt-1 text-sm font-medium tabular-nums text-foreground">{formatDuration(totalBreakSeconds)}</p>
           </div>
           <div>
             <p className="text-xs font-medium text-muted-foreground">Worked Time Today</p>
-            <p className="mt-1 text-sm font-medium tabular-nums text-foreground">{formatDuration(workedSeconds)}</p>
+            <p className="mt-1 text-sm font-medium tabular-nums text-foreground">{formatDuration(totalWorkedSeconds)}</p>
+          </div>
+          <div>
+            <p className="text-xs font-medium text-muted-foreground">Sessions Today</p>
+            <p className="mt-1 text-sm font-medium text-foreground">
+              {realSessions.length === 1 ? "1 Session" : `${realSessions.length} Sessions`}
+            </p>
           </div>
         </div>
 
         <div className="flex flex-wrap items-center gap-2 border-t border-border pt-4">
-          {!record && (
+          {!isLive && (
             <Button type="button" size="sm" onClick={() => run(startWork)} disabled={isPending}>
               {isPending ? <Loader2 className="size-3.5 animate-spin" data-icon="inline-start" /> : <Play className="size-3.5" data-icon="inline-start" />}
-              Start Work
+              {realSessions.length === 0 ? "Start Work" : "Start New Session"}
             </Button>
           )}
 
-          {record?.status === "working" && (
+          {isWorking && (
             <>
               <Button type="button" variant="outline" size="sm" onClick={() => run(startBreak)} disabled={isPending}>
                 <Coffee className="size-3.5" data-icon="inline-start" />
@@ -100,7 +121,7 @@ export function AttendanceTimerWidget({ record }: AttendanceTimerWidgetProps) {
             </>
           )}
 
-          {record?.status === "on_break" && (
+          {isOnBreak && (
             <>
               <Button type="button" size="sm" onClick={() => run(resumeWork)} disabled={isPending}>
                 <Play className="size-3.5" data-icon="inline-start" />
@@ -113,11 +134,9 @@ export function AttendanceTimerWidget({ record }: AttendanceTimerWidgetProps) {
             </>
           )}
 
-          {record?.status === "finished" && <p className="text-sm text-muted-foreground">You&apos;ve ended work for today.</p>}
-          {record?.status === "auto_closed" && (
-            <p className="text-sm text-muted-foreground">Your session was automatically closed at the cutoff time.</p>
+          {latest?.status === "auto_closed" && !isLive && (
+            <p className="text-sm text-muted-foreground">Your last session was automatically closed at the cutoff time.</p>
           )}
-          {record?.status === "absent" && <p className="text-sm text-muted-foreground">Marked absent - no check-in recorded today.</p>}
         </div>
 
         {error && <p className="text-sm text-destructive">{error}</p>}
