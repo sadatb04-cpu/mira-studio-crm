@@ -7,15 +7,15 @@ import {
   createEmployee as createEmployeeQuery,
   updateEmployee as updateEmployeeQuery,
 } from "@/lib/supabase/employees"
-import { createEmployeeSchema, employeeFormSchema } from "@/lib/validations/employee"
-import type { CreateEmployeeInput, EmployeeFormInput } from "@/lib/validations/employee"
+import { employeeFormSchema } from "@/lib/validations/employee"
+import type { EmployeeFormInput } from "@/lib/validations/employee"
 
 export interface EmployeeActionState {
   error?: string
 }
 
-export async function createEmployee(input: CreateEmployeeInput): Promise<EmployeeActionState> {
-  const validated = createEmployeeSchema.safeParse(input)
+export async function createEmployee(input: EmployeeFormInput): Promise<EmployeeActionState> {
+  const validated = employeeFormSchema.safeParse(input)
 
   if (!validated.success) {
     return { error: validated.error.issues.map((issue) => issue.message).join(" ") }

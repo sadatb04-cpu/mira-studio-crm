@@ -1,14 +1,30 @@
 "use server"
 
+import type { SupabaseClient } from "@supabase/supabase-js"
 import { redirect } from "next/navigation"
 
 import { createClient } from "@/lib/supabase/server"
 import { ensureProfile } from "@/lib/supabase/profile"
-import { loginSchema, signupSchema } from "@/lib/validations/auth"
+import { loginSchema } from "@/lib/validations/auth"
 
 export interface AuthFormState {
   error?: string
   fieldErrors?: Record<string, string[]>
+}
+
+async function logAuthActivity(
+  supabase: SupabaseClient,
+  entry: { actor_id: string | null; action: string; description: string }
+) {
+  // Best-effort only, matching the non-throwing activity logging pattern
+  // used throughout the app - never let logging block a login/logout.
+  await supabase.from("activity_logs").insert({
+    entity_type: "profile",
+    entity_id: entry.actor_id,
+    action: entry.action,
+    description: entry.description,
+    actor_id: entry.actor_id,
+  })
 }
 
 export async function login(_prevState: AuthFormState, formData: FormData): Promise<AuthFormState> {
@@ -25,50 +41,55 @@ export async function login(_prevState: AuthFormState, formData: FormData): Prom
   const { data, error } = await supabase.auth.signInWithPassword(validated.data)
 
   if (error || !data.user) {
+    // No profile id exists for a failed attempt (wrong password, or the
+    // email doesn't exist at all) - logged with a null entity_id, per the
+    // brief's "where possible" allowance for failed-login audit entries.
+    await logAuthActivity(supabase, {
+      actor_id: null,
+      action: "login_failed",
+      description: `Failed sign-in attempt for ${validated.data.email}.`,
+    })
     return { error: error?.message ?? "Unable to sign in." }
   }
 
   await ensureProfile(supabase, data.user)
 
+  const { data: profile, error: profileError } = await supabase
+    .from("profiles")
+    .select("account_status")
+    .eq("id", data.user.id)
+    .single()
+
+  if (profileError) {
+    await supabase.auth.signOut()
+    return { error: "Unable to verify account status." }
+  }
+
+  if (profile.account_status !== "active") {
+    await logAuthActivity(supabase, {
+      actor_id: data.user.id,
+      action: "login_blocked",
+      description: `Sign-in blocked - account status is "${profile.account_status}".`,
+    })
+    await supabase.auth.signOut()
+    return { error: "Your account is not active. Contact an administrator." }
+  }
+
+  await logAuthActivity(supabase, { actor_id: data.user.id, action: "login", description: "Signed in." })
+
   redirect("/")
-}
-
-export async function signup(_prevState: AuthFormState, formData: FormData): Promise<AuthFormState> {
-  const validated = signupSchema.safeParse({
-    fullName: formData.get("fullName"),
-    email: formData.get("email"),
-    password: formData.get("password"),
-    confirmPassword: formData.get("confirmPassword"),
-  })
-
-  if (!validated.success) {
-    return { fieldErrors: validated.error.flatten().fieldErrors }
-  }
-
-  const supabase = await createClient()
-  const { data, error } = await supabase.auth.signUp({
-    email: validated.data.email,
-    password: validated.data.password,
-    options: {
-      data: { full_name: validated.data.fullName },
-    },
-  })
-
-  if (error || !data.user) {
-    return { error: error?.message ?? "Unable to create account." }
-  }
-
-  // If the project auto-confirms email (no verification step), signUp()
-  // immediately creates a session - the proxy will then route this request
-  // straight into the app, so the profile row must already exist by the
-  // time any (app) page reads it via getProfile()'s .single() call.
-  await ensureProfile(supabase, data.user)
-
-  redirect("/login?registered=1")
 }
 
 export async function signOut() {
   const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (user) {
+    await logAuthActivity(supabase, { actor_id: user.id, action: "logout", description: "Signed out." })
+  }
+
   await supabase.auth.signOut()
   redirect("/login")
 }

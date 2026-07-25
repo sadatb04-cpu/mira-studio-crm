@@ -1,6 +1,5 @@
 "use client"
 
-import Link from "next/link"
 import { useActionState } from "react"
 
 import { login } from "@/app/actions/auth"
@@ -8,21 +7,11 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 
-interface LoginFormProps {
-  registered?: boolean
-}
-
-export function LoginForm({ registered }: LoginFormProps) {
+export function LoginForm() {
   const [state, formAction, pending] = useActionState(login, {})
 
   return (
     <form action={formAction} className="flex flex-col gap-4">
-      {registered && (
-        <p className="rounded-lg bg-primary/10 px-3 py-2 text-sm text-primary">
-          Account created. Check your email to confirm, then sign in.
-        </p>
-      )}
-
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="email">Email</Label>
         <Input id="email" name="email" type="email" autoComplete="email" required />
@@ -45,11 +34,8 @@ export function LoginForm({ registered }: LoginFormProps) {
         {pending ? "Signing in..." : "Sign in"}
       </Button>
 
-      <p className="text-center text-sm text-muted-foreground">
-        Don&apos;t have an account?{" "}
-        <Link href="/signup" className="font-medium text-primary hover:underline">
-          Sign up
-        </Link>
+      <p className="text-center text-xs text-muted-foreground">
+        Access is by invitation only. Contact an administrator if you need an account.
       </p>
     </form>
   )

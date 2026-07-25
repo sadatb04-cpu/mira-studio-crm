@@ -1,7 +1,7 @@
 import { createServerClient } from "@supabase/ssr"
 import { NextResponse, type NextRequest } from "next/server"
 
-const PUBLIC_ROUTES = ["/login", "/signup", "/auth/callback"]
+const PUBLIC_ROUTES = ["/login", "/auth/callback"]
 
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request })
@@ -37,6 +37,22 @@ export async function updateSession(request: NextRequest) {
     const url = request.nextUrl.clone()
     url.pathname = "/login"
     return NextResponse.redirect(url)
+  }
+
+  if (user && !isPublicRoute) {
+    // Defense in depth: a disabled/suspended account's existing access
+    // token can remain technically valid for its natural TTL even after
+    // an admin bans it at the Auth layer. Checking account_status on
+    // every request closes that window immediately, rather than waiting
+    // for the token to expire on its own.
+    const { data: profile } = await supabase.from("profiles").select("account_status").eq("id", user.id).maybeSingle()
+
+    if (!profile || profile.account_status !== "active") {
+      await supabase.auth.signOut()
+      const url = request.nextUrl.clone()
+      url.pathname = "/login"
+      return NextResponse.redirect(url)
+    }
   }
 
   if (user && isPublicRoute) {

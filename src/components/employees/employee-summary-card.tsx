@@ -3,6 +3,7 @@ import { format } from "date-fns"
 import { SectionCard } from "@/components/shared/section-card"
 import { DEPARTMENT_LABELS, USER_ROLE_LABELS } from "@/types/profile"
 import { EMPLOYMENT_STATUS_LABELS } from "@/types/employee"
+import { ACCOUNT_STATUS_LABELS } from "@/types/user-account"
 import type { EmployeeDetail } from "@/types/employee"
 
 function formatDate(value: string | null) {
@@ -22,38 +23,40 @@ interface EmployeeSummaryCardProps {
 }
 
 export function EmployeeSummaryCard({ employee }: EmployeeSummaryCardProps) {
-  const { profile } = employee
-
   return (
     <SectionCard title="Profile">
       <div className="flex flex-col gap-4">
         <div className="flex items-center gap-3">
-          {profile.avatar_url ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={profile.avatar_url}
-              alt={profile.full_name}
-              className="size-12 shrink-0 rounded-full object-cover"
-            />
-          ) : (
-            <div className="flex size-12 shrink-0 items-center justify-center rounded-full bg-muted text-sm font-semibold text-muted-foreground">
-              {getInitials(profile.full_name)}
-            </div>
-          )}
+          <div className="flex size-12 shrink-0 items-center justify-center rounded-full bg-muted text-sm font-semibold text-muted-foreground">
+            {getInitials(employee.full_name)}
+          </div>
           <div>
-            <p className="text-sm font-semibold text-foreground">{profile.full_name}</p>
-            <p className="text-xs text-muted-foreground">{profile.email}</p>
+            <p className="text-sm font-semibold text-foreground">{employee.full_name}</p>
+            <p className="text-xs text-muted-foreground">{employee.email ?? "No email on file"}</p>
           </div>
         </div>
 
         <dl className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <Field label="Phone" value={profile.phone ?? "—"} />
-          <Field label="Role" value={USER_ROLE_LABELS[profile.role]} />
-          <Field label="Department" value={profile.department ? DEPARTMENT_LABELS[profile.department] : "—"} />
+          <Field label="Phone" value={employee.phone ?? "—"} />
+          <Field label="Department" value={employee.department ? DEPARTMENT_LABELS[employee.department] : "—"} />
           <Field label="Position" value={employee.position ?? "—"} />
           <Field label="Employment Status" value={EMPLOYMENT_STATUS_LABELS[employee.employment_status]} />
           <Field label="Hire Date" value={formatDate(employee.hire_date)} />
         </dl>
+
+        <div className="border-t border-border pt-4">
+          <p className="mb-2 text-xs font-medium text-muted-foreground">CRM Access</p>
+          {employee.linkedAccount ? (
+            <dl className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <Field label="Role" value={USER_ROLE_LABELS[employee.linkedAccount.role]} />
+              <Field label="Account Status" value={ACCOUNT_STATUS_LABELS[employee.linkedAccount.accountStatus]} />
+            </dl>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              No CRM account linked. Create one from Settings &rarr; Users to grant access.
+            </p>
+          )}
+        </div>
       </div>
     </SectionCard>
   )

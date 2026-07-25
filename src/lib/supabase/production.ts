@@ -114,22 +114,23 @@ export async function getProductionJobsForOrder(
   return (data ?? []).map((row) => ({ id: row.id as string, job_number: row.job_number as string }))
 }
 
+// Only employees linked to a CRM account (user_id) are assignable - the
+// returned id is that account's profile id, since assigned_to/uploaded_by
+// reference profiles(id), not employees(id).
 export async function getEmployees(supabase: SupabaseClient): Promise<EmployeeOption[]> {
   const { data, error } = await supabase
     .from("employees")
-    .select("id, profile:profiles(full_name, email)")
+    .select("user_id, full_name, email")
     .eq("employment_status", "active")
+    .not("user_id", "is", null)
 
   if (error) throw error
 
-  return (data ?? []).map((row) => {
-    const profile = row.profile as unknown as { full_name: string; email: string | null } | null
-    return {
-      id: row.id as string,
-      full_name: profile?.full_name ?? "Unknown",
-      email: profile?.email ?? null,
-    }
-  })
+  return (data ?? []).map((row) => ({
+    id: row.user_id as string,
+    full_name: row.full_name,
+    email: row.email,
+  }))
 }
 
 export async function getProductionTimeline(supabase: SupabaseClient, jobId: string): Promise<TimelineEvent[]> {

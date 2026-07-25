@@ -21,7 +21,7 @@ export default async function EditEmployeePage({ params }: EditEmployeePageProps
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-6">
-      <PageHeader title="Edit Employee" description={`Update ${employee.profile.full_name}'s record.`} />
+      <PageHeader title="Edit Employee" description={`Update ${employee.full_name}'s record.`} />
 
       <EmployeeForm mode="edit" employee={employee} />
     </div>

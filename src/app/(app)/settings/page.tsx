@@ -1,6 +1,9 @@
+import Link from "next/link"
+import { Users } from "lucide-react"
 import { notFound, redirect } from "next/navigation"
 
 import { PageHeader } from "@/components/shared/page-header"
+import { Button } from "@/components/ui/button"
 import { CompanySettingsCard } from "@/components/settings/company-settings-card"
 import { PreferenceSettingsCard } from "@/components/settings/preference-settings-card"
 import { BusinessRulesCard } from "@/components/settings/business-rules-card"
@@ -36,7 +39,18 @@ export default async function SettingsPage() {
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-6">
-      <PageHeader title="Settings" description="Configure system options, integration endpoints, and parameters." />
+      <PageHeader
+        title="Settings"
+        description="Configure system options, integration endpoints, and parameters."
+        actions={
+          <Button asChild size="sm" variant="outline">
+            <Link href="/settings/users">
+              <Users className="size-3.5" data-icon="inline-start" />
+              Manage Users
+            </Link>
+          </Button>
+        }
+      />
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <CompanySettingsCard companyInfo={settings.companyInfo} />

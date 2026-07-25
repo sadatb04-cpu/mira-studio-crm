@@ -1,3 +1,4 @@
+import type { AccountStatus } from "@/types/user-account"
 import type { Department, UserRole } from "@/types/profile"
 import type { ProductionJobStatus } from "@/types/production"
 import type { TaskStatus } from "@/types/task"
@@ -11,22 +12,26 @@ export const EMPLOYMENT_STATUS_LABELS: Record<EmploymentStatus, string> = {
   terminated: "Terminated",
 }
 
-export interface EmployeeProfileSummary {
-  id: string
-  full_name: string
-  email: string
-  phone: string | null
+// Present only when this employee is linked to a CRM account (employees.user_id).
+// An employee with no linked account has no CRM login at all - see Sprint
+// "Security 1.0 - Private Authentication" for why employees and accounts
+// are separate concepts.
+export interface EmployeeLinkedAccount {
+  userId: string
   role: UserRole
-  department: Department | null
-  avatar_url: string | null
+  accountStatus: AccountStatus
 }
 
 export interface EmployeeListItem {
   id: string
+  full_name: string
+  email: string | null
+  phone: string | null
+  department: Department | null
   position: string | null
   hire_date: string | null
   employment_status: EmploymentStatus
-  profile: EmployeeProfileSummary
+  linkedAccount: EmployeeLinkedAccount | null
 }
 
 export interface EmployeeDetail extends EmployeeListItem {
@@ -68,20 +73,10 @@ export interface EmployeeTimelineEvent {
 
 export interface EmployeeFormInput {
   full_name: string
-  email: string
+  email?: string
   phone?: string
   department?: Department
-  role: UserRole
   position: string
   employment_status: EmploymentStatus
   hire_date: string
-}
-
-export interface AvailableProfileOption {
-  id: string
-  full_name: string
-  email: string
-  phone: string | null
-  role: UserRole
-  department: Department | null
 }

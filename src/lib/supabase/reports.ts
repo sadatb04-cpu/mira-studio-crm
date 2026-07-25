@@ -253,8 +253,11 @@ export async function getTaskCompletion(
 // Snapshot, not date-ranged - current workload, org-wide (a new aggregate;
 // employees.ts only computes this per-employee, not across all employees).
 export async function getEmployeeWorkload(supabase: SupabaseClient): Promise<EmployeeWorkload[]> {
+  // assigned_to references profiles(id), so only employees linked to a
+  // CRM account (user_id) can have any workload at all - an unlinked
+  // employee could never appear in either assignment table.
   const [employeesResult, jobsResult, tasksResult] = await Promise.all([
-    supabase.from("employees").select("id, profile:profiles!inner(full_name)").eq("employment_status", "active"),
+    supabase.from("employees").select("user_id, full_name").eq("employment_status", "active").not("user_id", "is", null),
     supabase.from("production_jobs").select("assigned_to").not("assigned_to", "is", null),
     supabase.from("tasks").select("assigned_to").not("assigned_to", "is", null),
   ])
@@ -277,13 +280,12 @@ export async function getEmployeeWorkload(supabase: SupabaseClient): Promise<Emp
 
   return (employeesResult.data ?? [])
     .map((employee) => {
-      const profile = employee.profile as unknown as { full_name: string }
-      const id = employee.id as string
+      const userId = employee.user_id as string
       return {
-        employeeId: id,
-        name: profile.full_name,
-        jobCount: jobCounts.get(id) ?? 0,
-        taskCount: taskCounts.get(id) ?? 0,
+        employeeId: userId,
+        name: employee.full_name as string,
+        jobCount: jobCounts.get(userId) ?? 0,
+        taskCount: taskCounts.get(userId) ?? 0,
       }
     })
     .sort((a, b) => b.jobCount + b.taskCount - (a.jobCount + a.taskCount))

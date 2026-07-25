@@ -1,13 +1,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { LoginForm } from "@/app/(auth)/login/login-form"
 
-interface LoginPageProps {
-  searchParams: Promise<{ registered?: string }>
-}
-
-export default async function LoginPage({ searchParams }: LoginPageProps) {
-  const { registered } = await searchParams
-
+export default function LoginPage() {
   return (
     <Card className="w-full max-w-sm">
       <CardHeader>
@@ -15,7 +9,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
         <CardDescription>Sign in to Mira Operations to continue.</CardDescription>
       </CardHeader>
       <CardContent>
-        <LoginForm registered={registered === "1"} />
+        <LoginForm />
       </CardContent>
     </Card>
   )

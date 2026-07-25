@@ -2,21 +2,32 @@ import type { SupabaseClient } from "@supabase/supabase-js"
 
 import type { Department, UserRole } from "@/types/profile"
 import type {
-  AvailableProfileOption,
   EmployeeAssignments,
   EmployeeDashboardStats,
   EmployeeDetail,
   EmployeeFormInput,
   EmployeeListItem,
+  EmployeeLinkedAccount,
   EmployeeTimelineEvent,
   EmploymentStatus,
 } from "@/types/employee"
-import type { CreateEmployeeInput } from "@/lib/validations/employee"
 
-const EMPLOYEE_LIST_COLUMNS = `
-  id, position, hire_date, employment_status,
-  profile:profiles!inner(id, full_name, email, phone, role, department, avatar_url)
-`
+const EMPLOYEE_COLUMNS =
+  "id, full_name, email, phone, department, position, hire_date, employment_status, user_id, termination_date, created_at"
+
+interface RawEmployeeRow {
+  id: string
+  full_name: string
+  email: string | null
+  phone: string | null
+  department: Department | null
+  position: string | null
+  hire_date: string | null
+  employment_status: EmploymentStatus
+  user_id: string | null
+  termination_date: string | null
+  created_at: string
+}
 
 interface GetEmployeesFilters {
   search?: string
@@ -25,60 +36,73 @@ interface GetEmployeesFilters {
   role?: UserRole
 }
 
+async function resolveLinkedAccounts(
+  supabase: SupabaseClient,
+  userIds: string[]
+): Promise<Map<string, EmployeeLinkedAccount>> {
+  if (userIds.length === 0) return new Map()
+
+  const { data, error } = await supabase.from("profiles").select("id, role, account_status").in("id", userIds)
+  if (error) throw error
+
+  return new Map(
+    (data ?? []).map((row) => [
+      row.id as string,
+      { userId: row.id as string, role: row.role as UserRole, accountStatus: row.account_status } as EmployeeLinkedAccount,
+    ])
+  )
+}
+
+function toListItem(row: RawEmployeeRow, linkedAccounts: Map<string, EmployeeLinkedAccount>): EmployeeListItem {
+  return {
+    id: row.id,
+    full_name: row.full_name,
+    email: row.email,
+    phone: row.phone,
+    department: row.department,
+    position: row.position,
+    hire_date: row.hire_date,
+    employment_status: row.employment_status,
+    linkedAccount: row.user_id ? (linkedAccounts.get(row.user_id) ?? null) : null,
+  }
+}
+
 export async function getEmployees(
   supabase: SupabaseClient,
   filters: GetEmployeesFilters = {}
 ): Promise<EmployeeListItem[]> {
+  let query = supabase.from("employees").select(EMPLOYEE_COLUMNS)
+
+  if (filters.employmentStatus) query = query.eq("employment_status", filters.employmentStatus)
+  if (filters.department) query = query.eq("department", filters.department)
+
   if (filters.search) {
-    // PostgREST can't OR a root column (position) with a joined column
-    // (profile.full_name) in a single query - same limitation as the
-    // Orders/Production search workaround, so run both and merge.
     const pattern = `%${filters.search}%`
-
-    let byName = supabase.from("employees").select(EMPLOYEE_LIST_COLUMNS).ilike("profile.full_name", pattern)
-    let byPosition = supabase.from("employees").select(EMPLOYEE_LIST_COLUMNS).ilike("position", pattern)
-
-    if (filters.employmentStatus) {
-      byName = byName.eq("employment_status", filters.employmentStatus)
-      byPosition = byPosition.eq("employment_status", filters.employmentStatus)
-    }
-    if (filters.department) {
-      byName = byName.eq("profile.department", filters.department)
-      byPosition = byPosition.eq("profile.department", filters.department)
-    }
-    if (filters.role) {
-      byName = byName.eq("profile.role", filters.role)
-      byPosition = byPosition.eq("profile.role", filters.role)
-    }
-
-    const [nameResult, positionResult] = await Promise.all([byName, byPosition])
-    if (nameResult.error) throw nameResult.error
-    if (positionResult.error) throw positionResult.error
-
-    const merged = new Map<string, EmployeeListItem>()
-    for (const row of [...nameResult.data, ...positionResult.data] as unknown as EmployeeListItem[]) {
-      merged.set(row.id, row)
-    }
-
-    return Array.from(merged.values()).sort((a, b) => a.profile.full_name.localeCompare(b.profile.full_name))
+    query = query.or(`full_name.ilike.${pattern},position.ilike.${pattern}`)
   }
 
-  let query = supabase.from("employees").select(EMPLOYEE_LIST_COLUMNS)
-
-  if (filters.employmentStatus) {
-    query = query.eq("employment_status", filters.employmentStatus)
-  }
-  if (filters.department) {
-    query = query.eq("profile.department", filters.department)
-  }
   if (filters.role) {
-    query = query.eq("profile.role", filters.role)
+    const { data: matchingProfiles, error: roleError } = await supabase
+      .from("profiles")
+      .select("id")
+      .eq("role", filters.role)
+    if (roleError) throw roleError
+
+    const ids = (matchingProfiles ?? []).map((row) => row.id)
+    if (ids.length === 0) return []
+    query = query.in("user_id", ids)
   }
 
   const { data, error } = await query
   if (error) throw error
 
-  return (data ?? []) as unknown as EmployeeListItem[]
+  const rows = (data ?? []) as unknown as RawEmployeeRow[]
+  const linkedAccounts = await resolveLinkedAccounts(
+    supabase,
+    rows.filter((row) => row.user_id).map((row) => row.user_id as string)
+  )
+
+  return rows.map((row) => toListItem(row, linkedAccounts)).sort((a, b) => a.full_name.localeCompare(b.full_name))
 }
 
 export async function getEmployeeDashboardStats(supabase: SupabaseClient): Promise<EmployeeDashboardStats> {
@@ -99,32 +123,39 @@ export async function getEmployeeDashboardStats(supabase: SupabaseClient): Promi
 }
 
 export async function getEmployee(supabase: SupabaseClient, id: string): Promise<EmployeeDetail | null> {
-  const { data, error } = await supabase
-    .from("employees")
-    .select(
-      `
-      id, position, hire_date, employment_status, termination_date, created_at,
-      profile:profiles!inner(id, full_name, email, phone, role, department, avatar_url)
-      `
-    )
-    .eq("id", id)
-    .maybeSingle()
+  const { data, error } = await supabase.from("employees").select(EMPLOYEE_COLUMNS).eq("id", id).maybeSingle()
 
   if (error) throw error
-  return data as unknown as EmployeeDetail | null
+  if (!data) return null
+
+  const row = data as unknown as RawEmployeeRow
+  const linkedAccounts = await resolveLinkedAccounts(supabase, row.user_id ? [row.user_id] : [])
+
+  return {
+    ...toListItem(row, linkedAccounts),
+    termination_date: row.termination_date,
+    created_at: row.created_at,
+  }
 }
 
-export async function getEmployeeAssignments(supabase: SupabaseClient, employeeId: string): Promise<EmployeeAssignments> {
+export async function getEmployeeAssignments(
+  supabase: SupabaseClient,
+  userId: string | null
+): Promise<EmployeeAssignments> {
+  // An employee with no linked CRM account can never appear in assigned_to
+  // (it references profiles.id) - there is nothing to look up.
+  if (!userId) return { productionJobs: [], tasks: [] }
+
   const [jobsResult, tasksResult] = await Promise.all([
     supabase
       .from("production_jobs")
       .select("id, job_number, status")
-      .eq("assigned_to", employeeId)
+      .eq("assigned_to", userId)
       .order("created_at", { ascending: false }),
     supabase
       .from("tasks")
       .select("id, title, status")
-      .eq("assigned_to", employeeId)
+      .eq("assigned_to", userId)
       .order("created_at", { ascending: false }),
   ])
 
@@ -149,26 +180,6 @@ export async function getEmployeeTimeline(supabase: SupabaseClient, employeeId: 
   return (data ?? []) as EmployeeTimelineEvent[]
 }
 
-export async function getAvailableProfiles(supabase: SupabaseClient): Promise<AvailableProfileOption[]> {
-  const { data: employees, error: employeesError } = await supabase.from("employees").select("id")
-  if (employeesError) throw employeesError
-
-  const existingIds = (employees ?? []).map((row) => row.id as string)
-
-  let query = supabase
-    .from("profiles")
-    .select("id, full_name, email, phone, role, department")
-    .order("full_name", { ascending: true })
-  if (existingIds.length > 0) {
-    query = query.not("id", "in", `(${existingIds.join(",")})`)
-  }
-
-  const { data, error } = await query
-  if (error) throw error
-
-  return (data ?? []) as AvailableProfileOption[]
-}
-
 // Best-effort only - activity logging must never fail employee
 // creation/updates (same non-throwing pattern as Orders/Tasks).
 async function logActivity(
@@ -188,36 +199,31 @@ async function logActivity(
   })
 }
 
-export async function createEmployee(supabase: SupabaseClient, input: CreateEmployeeInput): Promise<string> {
-  const { error: profileError } = await supabase
-    .from("profiles")
-    .update({
+// Creates a standalone HR record. No CRM account is created or required -
+// see types/employee.ts for why employees and CRM accounts are separate.
+// Use createUserAccount() (lib/supabase/user-accounts.ts) to grant this
+// person CRM access afterward.
+export async function createEmployee(supabase: SupabaseClient, input: EmployeeFormInput): Promise<string> {
+  const { data, error } = await supabase
+    .from("employees")
+    .insert({
       full_name: input.full_name,
-      email: input.email,
+      email: input.email || null,
       phone: input.phone || null,
       department: input.department || null,
-      role: input.role,
+      position: input.position,
+      hire_date: input.hire_date,
+      employment_status: input.employment_status,
     })
-    .eq("id", input.profile_id)
+    .select("id")
+    .single()
 
-  if (profileError) throw profileError
+  if (error) throw error
 
-  const { error: employeeError } = await supabase.from("employees").insert({
-    id: input.profile_id,
-    position: input.position,
-    hire_date: input.hire_date,
-    employment_status: input.employment_status,
-  })
+  const employeeId = data.id as string
+  await logActivity(supabase, { entity_id: employeeId, action: "created", description: `${input.full_name} added as an employee.` })
 
-  if (employeeError) throw employeeError
-
-  await logActivity(supabase, {
-    entity_id: input.profile_id,
-    action: "created",
-    description: `${input.full_name} added as an employee.`,
-  })
-
-  return input.profile_id
+  return employeeId
 }
 
 export async function updateEmployee(supabase: SupabaseClient, id: string, input: EmployeeFormInput): Promise<void> {
@@ -229,29 +235,20 @@ export async function updateEmployee(supabase: SupabaseClient, id: string, input
 
   if (fetchError) throw fetchError
 
-  const { error: profileError } = await supabase
-    .from("profiles")
-    .update({
-      full_name: input.full_name,
-      email: input.email,
-      phone: input.phone || null,
-      department: input.department || null,
-      role: input.role,
-    })
-    .eq("id", id)
-
-  if (profileError) throw profileError
-
-  const { error: employeeError } = await supabase
+  const { error } = await supabase
     .from("employees")
     .update({
+      full_name: input.full_name,
+      email: input.email || null,
+      phone: input.phone || null,
+      department: input.department || null,
       position: input.position,
       hire_date: input.hire_date,
       employment_status: input.employment_status,
     })
     .eq("id", id)
 
-  if (employeeError) throw employeeError
+  if (error) throw error
 
   await logActivity(supabase, { entity_id: id, action: "updated", description: "Employee details updated." })
 

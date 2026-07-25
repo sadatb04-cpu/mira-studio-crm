@@ -11,6 +11,8 @@ import { EmployeeStatusBadge } from "@/components/employees/employee-status-badg
 import { USER_ROLE_LABELS } from "@/types/profile"
 import type { EmployeeListItem } from "@/types/employee"
 
+const NO_ACCESS_LABEL = "No CRM Access"
+
 function formatDate(value: string | null) {
   return value ? format(new Date(value), "MMM d, yyyy") : "—"
 }
@@ -37,7 +39,7 @@ export function EmployeeTable({ employees }: EmployeeTableProps) {
           <tr className="border-b border-border text-left text-xs font-medium text-muted-foreground">
             <th className="px-4 py-2">Name</th>
             <th className="px-4 py-2">Email</th>
-            <th className="px-4 py-2">Role</th>
+            <th className="px-4 py-2">CRM Access</th>
             <th className="px-4 py-2">Department</th>
             <th className="px-4 py-2">Position</th>
             <th className="px-4 py-2">Employment Status</th>
@@ -57,12 +59,14 @@ export function EmployeeTable({ employees }: EmployeeTableProps) {
                   onClick={(event) => event.stopPropagation()}
                   className="hover:underline"
                 >
-                  {employee.profile.full_name}
+                  {employee.full_name}
                 </Link>
               </td>
-              <td className="px-4 py-2.5 text-muted-foreground">{employee.profile.email}</td>
-              <td className="px-4 py-2.5 text-muted-foreground">{USER_ROLE_LABELS[employee.profile.role]}</td>
-              <td className="px-4 py-2.5 text-muted-foreground">{employee.profile.department ?? "—"}</td>
+              <td className="px-4 py-2.5 text-muted-foreground">{employee.email ?? "—"}</td>
+              <td className="px-4 py-2.5 text-muted-foreground">
+                {employee.linkedAccount ? USER_ROLE_LABELS[employee.linkedAccount.role] : NO_ACCESS_LABEL}
+              </td>
+              <td className="px-4 py-2.5 text-muted-foreground">{employee.department ?? "—"}</td>
               <td className="px-4 py-2.5 text-muted-foreground">{employee.position ?? "—"}</td>
               <td className="px-4 py-2.5">
                 <EmployeeStatusBadge status={employee.employment_status} />

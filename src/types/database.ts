@@ -297,36 +297,51 @@ export type Database = {
       employees: {
         Row: {
           created_at: string
+          department: Database["public"]["Enums"]["department"] | null
+          email: string | null
           employment_status: Database["public"]["Enums"]["employment_status"]
+          full_name: string
           hire_date: string | null
           id: string
+          phone: string | null
           position: string | null
           termination_date: string | null
           updated_at: string
+          user_id: string | null
         }
         Insert: {
           created_at?: string
+          department?: Database["public"]["Enums"]["department"] | null
+          email?: string | null
           employment_status?: Database["public"]["Enums"]["employment_status"]
+          full_name: string
           hire_date?: string | null
-          id: string
+          id?: string
+          phone?: string | null
           position?: string | null
           termination_date?: string | null
           updated_at?: string
+          user_id?: string | null
         }
         Update: {
           created_at?: string
+          department?: Database["public"]["Enums"]["department"] | null
+          email?: string | null
           employment_status?: Database["public"]["Enums"]["employment_status"]
+          full_name?: string
           hire_date?: string | null
           id?: string
+          phone?: string | null
           position?: string | null
           termination_date?: string | null
           updated_at?: string
+          user_id?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "employees_id_fkey"
-            columns: ["id"]
-            isOneToOne: true
+            foreignKeyName: "employees_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -926,6 +941,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          account_status: Database["public"]["Enums"]["account_status"]
           avatar_url: string | null
           created_at: string
           department: Database["public"]["Enums"]["department"] | null
@@ -938,6 +954,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          account_status?: Database["public"]["Enums"]["account_status"]
           avatar_url?: string | null
           created_at?: string
           department?: Database["public"]["Enums"]["department"] | null
@@ -950,6 +967,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          account_status?: Database["public"]["Enums"]["account_status"]
           avatar_url?: string | null
           created_at?: string
           department?: Database["public"]["Enums"]["department"] | null
@@ -1166,6 +1184,7 @@ export type Database = {
       }
     }
     Enums: {
+      account_status: "active" | "suspended" | "disabled" | "pending_invite"
       activity_entity_type:
         | "profile"
         | "employee"
@@ -1432,6 +1451,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      account_status: ["active", "suspended", "disabled", "pending_invite"],
       activity_entity_type: [
         "profile",
         "employee",

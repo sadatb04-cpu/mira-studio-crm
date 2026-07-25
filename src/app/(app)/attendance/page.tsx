@@ -14,8 +14,8 @@ import {
   getAttendanceDashboardSummary,
   getAttendanceEmployeeOptions,
   getAttendanceHistory,
+  getLinkedEmployeeId,
   getTodayAttendance,
-  isAttendanceEnabledForProfile,
   reconcileAttendance,
 } from "@/lib/supabase/attendance"
 import { resolveDateRange } from "@/lib/supabase/reports"
@@ -56,8 +56,9 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
   // yet (or is unavailable on this project) - see migration 0009.
   await reconcileAttendance(supabase)
 
-  const hasEmployeeRecord = await isAttendanceEnabledForProfile(supabase, user.id)
-  const todayRecord = hasEmployeeRecord ? await getTodayAttendance(supabase, user.id) : null
+  const linkedEmployeeId = await getLinkedEmployeeId(supabase, user.id)
+  const hasEmployeeRecord = linkedEmployeeId !== null
+  const todayRecord = linkedEmployeeId ? await getTodayAttendance(supabase, linkedEmployeeId) : null
 
   let managerSection: ReactNode = null
 

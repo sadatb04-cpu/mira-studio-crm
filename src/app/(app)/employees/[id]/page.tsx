@@ -26,14 +26,14 @@ export default async function EmployeeDetailPage({ params }: EmployeeDetailPageP
   }
 
   const [assignments, timeline] = await Promise.all([
-    getEmployeeAssignments(supabase, id),
+    getEmployeeAssignments(supabase, employee.linkedAccount?.userId ?? null),
     getEmployeeTimeline(supabase, id),
   ])
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-6">
       <PageHeader
-        title={employee.profile.full_name}
+        title={employee.full_name}
         description={employee.position ?? undefined}
         actions={
           <div className="flex items-center gap-2">

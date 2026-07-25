@@ -31,15 +31,10 @@ function todayIso(): string {
 async function resolveEmployeeNames(supabase: SupabaseClient, employeeIds: string[]): Promise<Map<string, string>> {
   if (employeeIds.length === 0) return new Map()
 
-  const { data, error } = await supabase
-    .from("employees")
-    .select("id, profile:profiles!inner(full_name)")
-    .in("id", employeeIds)
-
+  const { data, error } = await supabase.from("employees").select("id, full_name").in("id", employeeIds)
   if (error) throw error
 
-  const rows = (data ?? []) as unknown as { id: string; profile: { full_name: string } }[]
-  return new Map(rows.map((row) => [row.id, row.profile.full_name]))
+  return new Map((data ?? []).map((row) => [row.id as string, row.full_name as string]))
 }
 
 function toRecord(row: RawAttendanceRow, employeeName: string): AttendanceRecord {
@@ -71,10 +66,15 @@ export async function reconcileAttendance(supabase: SupabaseClient): Promise<voi
   }
 }
 
-export async function isAttendanceEnabledForProfile(supabase: SupabaseClient, profileId: string): Promise<boolean> {
-  const { data, error } = await supabase.from("employees").select("id").eq("id", profileId).maybeSingle()
+// attendance_records.employee_id references employees(id), which is now
+// independent of profiles.id (see Security Sprint 1.0 - employees and CRM
+// accounts are decoupled) - this resolves the logged-in user's own linked
+// employees.id via employees.user_id, which is the id every clock action
+// and lookup below actually needs.
+export async function getLinkedEmployeeId(supabase: SupabaseClient, profileId: string): Promise<string | null> {
+  const { data, error } = await supabase.from("employees").select("id").eq("user_id", profileId).maybeSingle()
   if (error) throw error
-  return data !== null
+  return data?.id ?? null
 }
 
 export async function getTodayAttendance(supabase: SupabaseClient, employeeId: string): Promise<AttendanceRecord | null> {
@@ -242,16 +242,13 @@ export async function getAttendanceDashboardSummary(supabase: SupabaseClient): P
 }
 
 export async function getAttendanceEmployeeOptions(supabase: SupabaseClient): Promise<AttendanceEmployeeOption[]> {
-  const { data, error } = await supabase.from("employees").select("id, profile:profiles!inner(full_name)")
-
+  // Only employees linked to a CRM account can ever have attendance
+  // records (clocking in requires being able to log in).
+  const { data, error } = await supabase.from("employees").select("id, full_name").not("user_id", "is", null)
   if (error) throw error
 
-  const rows = (data ?? []) as unknown as { id: string; profile: { full_name: string } }[]
-  // PostgREST embed order isn't guaranteed, so sort explicitly in JS
-  // rather than relying on the query's row order (same reasoning as the
-  // Orders module's earliest-item sort).
-  return rows
-    .map((row) => ({ id: row.id, name: row.profile.full_name }))
+  return (data ?? [])
+    .map((row) => ({ id: row.id as string, name: row.full_name as string }))
     .sort((a, b) => a.name.localeCompare(b.name))
 }
 
