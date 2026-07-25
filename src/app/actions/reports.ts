@@ -1,6 +1,7 @@
 "use server"
 
 import { createClient } from "@/lib/supabase/server"
+import { requireSpecialPermission } from "@/lib/supabase/permissions"
 import { exportReportCsv, resolveDateRange } from "@/lib/supabase/reports"
 import { exportReportSchema } from "@/lib/validations/report"
 import type { ExportReportInput } from "@/lib/validations/report"
@@ -21,6 +22,7 @@ export async function exportCSV(input: ExportReportInput): Promise<ExportCsvStat
   const range = resolveDateRange(validated.data.preset, validated.data.from, validated.data.to)
 
   try {
+    await requireSpecialPermission(supabase, "export_reports")
     const csv = await exportReportCsv(supabase, range)
     return { csv }
   } catch (error) {

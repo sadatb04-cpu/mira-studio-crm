@@ -1,14 +1,21 @@
 import { navigationItems } from "@/config/navigation";
 import { NavLink } from "@/components/layout/nav-link";
 import type { UserRole } from "@/types/profile";
+import type { UserPermissions } from "@/types/permission";
 
 interface SidebarProps {
   role?: UserRole | null;
+  permissions?: UserPermissions | null;
   onNavigate?: () => void;
 }
 
-export function Sidebar({ role, onNavigate }: SidebarProps) {
-  const items = navigationItems.filter((item) => !item.roles || (role && item.roles.includes(role)));
+export function Sidebar({ role, permissions, onNavigate }: SidebarProps) {
+  const items = navigationItems.filter((item) => {
+    if (item.roles && (!role || !item.roles.includes(role))) return false;
+    // No View permission for this module -> hidden from the sidebar entirely.
+    if (item.permissionModule && permissions && !permissions.modules[item.permissionModule].can_view) return false;
+    return true;
+  });
 
   return (
     <div className="flex h-full flex-col bg-sidebar text-sidebar-foreground">

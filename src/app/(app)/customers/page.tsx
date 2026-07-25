@@ -4,6 +4,7 @@ import Link from "next/link"
 import { PageHeader } from "@/components/shared/page-header"
 import { StatCard } from "@/components/shared/stat-card"
 import { Button } from "@/components/ui/button"
+import { PermissionGate } from "@/components/providers/permission-gate"
 import { createClient } from "@/lib/supabase/server"
 import { getCustomers, getCustomersDashboardStats } from "@/lib/supabase/customers"
 import { CustomerFilters } from "@/components/customers/customer-filters"
@@ -34,12 +35,14 @@ export default async function CustomersPage({ searchParams }: CustomersPageProps
         title="Customers"
         description="Manage customer profiles, purchase history, and relationships."
         actions={
-          <Button asChild size="sm">
-            <Link href="/customers/new">
-              <Plus className="size-3.5" data-icon="inline-start" />
-              New Customer
-            </Link>
-          </Button>
+          <PermissionGate module="customers" action="create">
+            <Button asChild size="sm">
+              <Link href="/customers/new">
+                <Plus className="size-3.5" data-icon="inline-start" />
+                New Customer
+              </Link>
+            </Button>
+          </PermissionGate>
         }
       />
 

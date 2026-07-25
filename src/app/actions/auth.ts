@@ -5,6 +5,8 @@ import { redirect } from "next/navigation"
 
 import { createClient } from "@/lib/supabase/server"
 import { ensureProfile } from "@/lib/supabase/profile"
+import { getUserPermissions } from "@/lib/supabase/permissions"
+import { getFirstAccessibleRoute } from "@/lib/permission-routing"
 import { loginSchema } from "@/lib/validations/auth"
 
 export interface AuthFormState {
@@ -56,7 +58,7 @@ export async function login(_prevState: AuthFormState, formData: FormData): Prom
 
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
-    .select("account_status")
+    .select("account_status, role")
     .eq("id", data.user.id)
     .single()
 
@@ -77,7 +79,10 @@ export async function login(_prevState: AuthFormState, formData: FormData): Prom
 
   await logAuthActivity(supabase, { actor_id: data.user.id, action: "login", description: "Signed in." })
 
-  redirect("/")
+  const permissions = await getUserPermissions(supabase, data.user.id)
+  const destination = getFirstAccessibleRoute(permissions, profile.role) ?? "/access-denied"
+
+  redirect(destination)
 }
 
 export async function signOut() {

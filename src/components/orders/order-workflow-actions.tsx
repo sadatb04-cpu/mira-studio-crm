@@ -4,6 +4,7 @@ import { useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
 
 import { Button } from "@/components/ui/button"
+import { useCanAccess, useHasSpecialPermission } from "@/components/providers/permissions-provider"
 import { updateQuotationStatus } from "@/app/actions/quotations"
 import { markOrderDelivered } from "@/app/actions/orders"
 import type { OrderStatus } from "@/types/order"
@@ -24,6 +25,9 @@ interface OrderWorkflowActionsProps {
 // control instead (unchanged from Sprint 4.1.3's quotation system).
 export function OrderWorkflowActions({ orderId, status, quotations }: OrderWorkflowActionsProps) {
   const router = useRouter()
+  const canSendQuotation = useHasSpecialPermission("send_quotation")
+  const canApproveQuotation = useHasSpecialPermission("approve_quotation")
+  const canEditQuotation = useCanAccess("quotations", "edit")
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
 
@@ -54,7 +58,7 @@ export function OrderWorkflowActions({ orderId, status, quotations }: OrderWorkf
   let content: React.ReactNode = null
 
   if (status === "pricing_ready") {
-    if (quotations.length === 1) {
+    if (quotations.length === 1 && canSendQuotation) {
       content = (
         <Button type="button" size="sm" onClick={() => handleQuotationStatus(quotations[0].id, "sent")} disabled={isPending}>
           {isPending ? "Sending..." : "Send Quote"}
@@ -72,18 +76,22 @@ export function OrderWorkflowActions({ orderId, status, quotations }: OrderWorkf
     if (sentQuotation) {
       content = (
         <div className="flex items-center gap-2">
-          <Button type="button" size="sm" onClick={() => handleQuotationStatus(sentQuotation.id, "accepted")} disabled={isPending}>
-            Customer Approved
-          </Button>
-          <Button
-            type="button"
-            size="sm"
-            variant="destructive"
-            onClick={() => handleQuotationStatus(sentQuotation.id, "rejected")}
-            disabled={isPending}
-          >
-            Customer Rejected
-          </Button>
+          {canApproveQuotation && (
+            <Button type="button" size="sm" onClick={() => handleQuotationStatus(sentQuotation.id, "accepted")} disabled={isPending}>
+              Customer Approved
+            </Button>
+          )}
+          {canEditQuotation && (
+            <Button
+              type="button"
+              size="sm"
+              variant="destructive"
+              onClick={() => handleQuotationStatus(sentQuotation.id, "rejected")}
+              disabled={isPending}
+            >
+              Customer Rejected
+            </Button>
+          )}
         </div>
       )
     } else {

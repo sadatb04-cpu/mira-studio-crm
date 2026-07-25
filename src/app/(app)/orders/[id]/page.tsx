@@ -14,6 +14,7 @@ import { OrderWorkflowStepper } from "@/components/orders/order-workflow-stepper
 import { OrderWorkflowActions } from "@/components/orders/order-workflow-actions"
 import { PricingSection } from "@/components/orders/pricing-section"
 import { CopyAddressButton } from "@/components/orders/copy-address-button"
+import { PermissionGate } from "@/components/providers/permission-gate"
 import { createClient } from "@/lib/supabase/server"
 import { getOrderById, getOrderTimeline } from "@/lib/supabase/orders"
 import { getQuotationsForOrder } from "@/lib/supabase/quotations"
@@ -155,7 +156,9 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
         )}
       </SectionCard>
 
-      <PricingSection orderId={orderId} quotations={quotations} />
+      <PermissionGate special="view_financial_pricing">
+        <PricingSection orderId={orderId} quotations={quotations} />
+      </PermissionGate>
 
       <SectionCard title="Production">
         {productionJobs.length > 0 ? (
@@ -175,9 +178,11 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
         )}
       </SectionCard>
 
-      <SectionCard title="Activity Timeline">
-        <OrderTimeline events={timeline} />
-      </SectionCard>
+      <PermissionGate special="view_activity_logs">
+        <SectionCard title="Activity Timeline">
+          <OrderTimeline events={timeline} />
+        </SectionCard>
+      </PermissionGate>
     </div>
   )
 }

@@ -8,9 +8,10 @@ import type { EmployeeAssignments } from "@/types/employee"
 
 interface EmployeeAssignmentCardProps {
   assignments: EmployeeAssignments
+  canViewTasks: boolean
 }
 
-export function EmployeeAssignmentCard({ assignments }: EmployeeAssignmentCardProps) {
+export function EmployeeAssignmentCard({ assignments, canViewTasks }: EmployeeAssignmentCardProps) {
   const { productionJobs, tasks } = assignments
 
   const activeJobs = productionJobs.filter((job) => job.status !== "completed" && job.status !== "cancelled").length
@@ -49,31 +50,33 @@ export function EmployeeAssignmentCard({ assignments }: EmployeeAssignmentCardPr
           )}
         </div>
 
-        <div className="flex flex-col gap-3 border-t border-border pt-4">
-          <div className="flex items-center justify-between">
-            <span className="text-sm font-medium text-foreground">Tasks</span>
-            <div className="flex gap-4 text-xs text-muted-foreground">
-              <span>Todo: {todoTasks}</span>
-              <span>In Progress: {inProgressTasks}</span>
-              <span>Completed: {completedTasks}</span>
+        {canViewTasks && (
+          <div className="flex flex-col gap-3 border-t border-border pt-4">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium text-foreground">Tasks</span>
+              <div className="flex gap-4 text-xs text-muted-foreground">
+                <span>Todo: {todoTasks}</span>
+                <span>In Progress: {inProgressTasks}</span>
+                <span>Completed: {completedTasks}</span>
+              </div>
             </div>
-          </div>
 
-          {tasks.length === 0 ? (
-            <EmptyState title="No tasks assigned" className="py-8" />
-          ) : (
-            <ul className="flex flex-col gap-1.5">
-              {tasks.map((task) => (
-                <li key={task.id} className="flex items-center justify-between text-sm">
-                  <Link href={`/tasks/${task.id}`} className="text-primary hover:underline">
-                    {task.title}
-                  </Link>
-                  <TaskStatusBadge status={task.status} />
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
+            {tasks.length === 0 ? (
+              <EmptyState title="No tasks assigned" className="py-8" />
+            ) : (
+              <ul className="flex flex-col gap-1.5">
+                {tasks.map((task) => (
+                  <li key={task.id} className="flex items-center justify-between text-sm">
+                    <Link href={`/tasks/${task.id}`} className="text-primary hover:underline">
+                      {task.title}
+                    </Link>
+                    <TaskStatusBadge status={task.status} />
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
       </div>
     </SectionCard>
   )

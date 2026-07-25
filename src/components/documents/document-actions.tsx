@@ -15,6 +15,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { ConfirmDialog } from "@/components/shared/confirm-dialog"
+import { useHasSpecialPermission } from "@/components/providers/permissions-provider"
 import { deleteDocument, downloadDocument } from "@/app/actions/documents"
 import { moveDocumentToFolder } from "@/app/actions/document-folders"
 import type { FolderOption } from "@/types/document"
@@ -31,6 +32,7 @@ interface DocumentActionsProps {
 
 export function DocumentActions({ documentId, fileName, currentFolderId, folders }: DocumentActionsProps) {
   const router = useRouter()
+  const canDeleteDocuments = useHasSpecialPermission("delete_documents")
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [moveOpen, setMoveOpen] = useState(false)
   const [selectedFolderId, setSelectedFolderId] = useState(currentFolderId ?? "")
@@ -105,10 +107,12 @@ export function DocumentActions({ documentId, fileName, currentFolderId, folders
           <FolderInput className="size-3.5" data-icon="inline-start" />
           Move
         </Button>
-        <Button type="button" variant="destructive" size="sm" onClick={() => setConfirmOpen(true)}>
-          <Trash2 className="size-3.5" data-icon="inline-start" />
-          Delete
-        </Button>
+        {canDeleteDocuments && (
+          <Button type="button" variant="destructive" size="sm" onClick={() => setConfirmOpen(true)}>
+            <Trash2 className="size-3.5" data-icon="inline-start" />
+            Delete
+          </Button>
+        )}
       </div>
       {error && <p className="text-sm text-destructive">{error}</p>}
 

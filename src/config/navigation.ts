@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 
 import type { UserRole } from "@/types/profile";
+import type { PermissionModule } from "@/types/permission";
 
 export type { UserRole };
 
@@ -29,6 +30,8 @@ export interface NavigationItem {
   };
   children?: NavigationItem[];
   roles?: UserRole[];
+  /** Hidden from the sidebar when the user lacks View for this module. Omitted for items with no permission-system equivalent (e.g. Tasks). */
+  permissionModule?: PermissionModule;
   isEnabled?: boolean;
 }
 
@@ -40,6 +43,7 @@ export const navigationItems: NavigationItem[] = [
     icon: LayoutDashboard,
     description: "Main dashboard containing key performance indicators and summaries.",
     isEnabled: true,
+    permissionModule: "dashboard",
   },
   {
     id: "orders",
@@ -48,6 +52,7 @@ export const navigationItems: NavigationItem[] = [
     icon: ShoppingBag,
     description: "Manage orders, bespoke commissions, and transactions.",
     isEnabled: true,
+    permissionModule: "orders",
   },
   {
     id: "production",
@@ -56,6 +61,7 @@ export const navigationItems: NavigationItem[] = [
     icon: Gem,
     description: "Track workshop manufacturing, progress, and quality assurance.",
     isEnabled: true,
+    permissionModule: "production",
   },
   {
     id: "customers",
@@ -64,6 +70,7 @@ export const navigationItems: NavigationItem[] = [
     icon: Users,
     description: "Manage customer profiles, purchase history, and relationships.",
     isEnabled: true,
+    permissionModule: "customers",
   },
   {
     id: "inventory",
@@ -72,6 +79,7 @@ export const navigationItems: NavigationItem[] = [
     icon: Package,
     description: "Monitor raw materials, precious elements, and stock levels.",
     isEnabled: true,
+    permissionModule: "inventory",
   },
   {
     id: "tasks",
@@ -80,6 +88,7 @@ export const navigationItems: NavigationItem[] = [
     icon: ClipboardList,
     description: "View and coordinate team tasks, assignments, and scheduling.",
     isEnabled: true,
+    permissionModule: "tasks",
   },
   {
     id: "employees",
@@ -88,6 +97,7 @@ export const navigationItems: NavigationItem[] = [
     icon: Briefcase,
     description: "Manage workforce records, schedules, and permissions.",
     isEnabled: true,
+    permissionModule: "employees",
   },
   {
     id: "attendance",
@@ -96,6 +106,7 @@ export const navigationItems: NavigationItem[] = [
     icon: Clock,
     description: "Track work sessions, breaks, and daily attendance.",
     isEnabled: true,
+    permissionModule: "attendance",
   },
   {
     id: "documents",
@@ -104,6 +115,7 @@ export const navigationItems: NavigationItem[] = [
     icon: FileText,
     description: "Access official documents, logs, and billing files.",
     isEnabled: true,
+    permissionModule: "documents",
   },
   {
     id: "reports",
@@ -112,6 +124,7 @@ export const navigationItems: NavigationItem[] = [
     icon: LineChart,
     description: "Generate sales, production, and performance analytics.",
     isEnabled: true,
+    permissionModule: "reports",
   },
   {
     id: "settings",
@@ -120,6 +133,7 @@ export const navigationItems: NavigationItem[] = [
     icon: Settings,
     description: "Configure system options, integration endpoints, and parameters.",
     isEnabled: true,
+    permissionModule: "settings",
     roles: ["admin"],
   },
 ];

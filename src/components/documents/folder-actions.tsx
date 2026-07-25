@@ -7,6 +7,7 @@ import { Loader2, Pencil, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { ConfirmDialog } from "@/components/shared/confirm-dialog"
 import { FolderFormDialog } from "@/components/documents/folder-form-dialog"
+import { useCanAccess } from "@/components/providers/permissions-provider"
 import { deleteDocumentFolder } from "@/app/actions/document-folders"
 
 interface FolderActionsProps {
@@ -17,6 +18,7 @@ interface FolderActionsProps {
 
 export function FolderActions({ folderId, folderName, folderDescription }: FolderActionsProps) {
   const router = useRouter()
+  const canDelete = useCanAccess("documents", "delete")
   const [renameOpen, setRenameOpen] = useState(false)
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -43,14 +45,16 @@ export function FolderActions({ folderId, folderName, folderDescription }: Folde
           <Pencil className="size-3.5" data-icon="inline-start" />
           Rename
         </Button>
-        <Button type="button" variant="destructive" size="sm" onClick={() => setConfirmOpen(true)}>
-          {isDeleting ? (
-            <Loader2 className="size-3.5 animate-spin" data-icon="inline-start" />
-          ) : (
-            <Trash2 className="size-3.5" data-icon="inline-start" />
-          )}
-          Delete
-        </Button>
+        {canDelete && (
+          <Button type="button" variant="destructive" size="sm" onClick={() => setConfirmOpen(true)}>
+            {isDeleting ? (
+              <Loader2 className="size-3.5 animate-spin" data-icon="inline-start" />
+            ) : (
+              <Trash2 className="size-3.5" data-icon="inline-start" />
+            )}
+            Delete
+          </Button>
+        )}
       </div>
       {error && <p className="text-sm text-destructive">{error}</p>}
 

@@ -4,6 +4,7 @@ import { useState, useTransition } from "react"
 import { Download, FileText } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
+import { useHasSpecialPermission } from "@/components/providers/permissions-provider"
 import { exportCSV } from "@/app/actions/reports"
 import type { DateRangePreset } from "@/types/report"
 
@@ -14,6 +15,7 @@ interface ExportButtonProps {
 }
 
 export function ExportButton({ preset, from, to }: ExportButtonProps) {
+  const canExport = useHasSpecialPermission("export_reports")
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
 
@@ -38,6 +40,8 @@ export function ExportButton({ preset, from, to }: ExportButtonProps) {
       URL.revokeObjectURL(url)
     })
   }
+
+  if (!canExport) return null
 
   return (
     <div className="flex flex-col items-end gap-1.5">

@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache"
 import type { SupabaseClient } from "@supabase/supabase-js"
 
 import { createClient } from "@/lib/supabase/server"
+import { requireSpecialPermission } from "@/lib/supabase/permissions"
 import {
   endWork as endWorkQuery,
   exportAttendanceHistoryCsv as exportAttendanceHistoryCsvQuery,
@@ -101,6 +102,7 @@ export async function exportAttendanceHistoryCsv(
   const supabase = await createClient()
 
   try {
+    await requireSpecialPermission(supabase, "export_reports")
     const csv = await exportAttendanceHistoryCsvQuery(supabase, filters)
     return { csv }
   } catch (error) {

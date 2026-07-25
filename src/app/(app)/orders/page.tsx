@@ -4,6 +4,7 @@ import Link from "next/link"
 import { PageHeader } from "@/components/shared/page-header"
 import { StatCard } from "@/components/shared/stat-card"
 import { Button } from "@/components/ui/button"
+import { PermissionGate } from "@/components/providers/permission-gate"
 import { createClient } from "@/lib/supabase/server"
 import { getOrders, getOrderStatusCounts } from "@/lib/supabase/orders"
 import { OrdersFilters } from "@/app/(app)/orders/orders-filters"
@@ -34,12 +35,14 @@ export default async function OrdersPage({ searchParams }: OrdersPageProps) {
         title="Orders"
         description="Manage orders, bespoke commissions, and transactions."
         actions={
-          <Button asChild size="sm">
-            <Link href="/orders/new">
-              <Plus className="size-3.5" data-icon="inline-start" />
-              New Order
-            </Link>
-          </Button>
+          <PermissionGate module="orders" action="create">
+            <Button asChild size="sm">
+              <Link href="/orders/new">
+                <Plus className="size-3.5" data-icon="inline-start" />
+                New Order
+              </Link>
+            </Button>
+          </PermissionGate>
         }
       />
 

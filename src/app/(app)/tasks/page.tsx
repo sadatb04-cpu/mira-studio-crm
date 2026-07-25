@@ -7,8 +7,10 @@ import { Button } from "@/components/ui/button"
 import { createClient } from "@/lib/supabase/server"
 import { getTaskDashboardStats, getTasks } from "@/lib/supabase/tasks"
 import { getEmployees } from "@/lib/supabase/production"
+import { requirePageView } from "@/lib/require-page-permission"
 import { TaskFilters } from "@/components/tasks/task-filters"
 import { TaskTable } from "@/components/tasks/task-table"
+import { PermissionGate } from "@/components/providers/permission-gate"
 import { TASK_PRIORITIES, TASK_STATUSES } from "@/types/task"
 import type { TaskPriority, TaskStatus } from "@/types/task"
 
@@ -23,6 +25,8 @@ interface TasksPageProps {
 }
 
 export default async function TasksPage({ searchParams }: TasksPageProps) {
+  await requirePageView("tasks")
+
   const { q, status, priority, assignedTo, due } = await searchParams
   const supabase = await createClient()
 
@@ -42,12 +46,14 @@ export default async function TasksPage({ searchParams }: TasksPageProps) {
         title="Tasks"
         description="View and coordinate team tasks, assignments, and scheduling."
         actions={
-          <Button asChild size="sm">
-            <Link href="/tasks/new">
-              <Plus className="size-3.5" data-icon="inline-start" />
-              New Task
-            </Link>
-          </Button>
+          <PermissionGate module="tasks" action="create">
+            <Button asChild size="sm">
+              <Link href="/tasks/new">
+                <Plus className="size-3.5" data-icon="inline-start" />
+                New Task
+              </Link>
+            </Button>
+          </PermissionGate>
         }
       />
 

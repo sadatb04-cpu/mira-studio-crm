@@ -1,6 +1,7 @@
 "use server"
 
 import { createClient } from "@/lib/supabase/server"
+import { requireModulePermission } from "@/lib/supabase/permissions"
 import {
   adjustInventory as adjustInventoryQuery,
   consumeInventory as consumeInventoryQuery,
@@ -22,6 +23,7 @@ export async function consumeInventory(input: ConsumeInventoryInput): Promise<In
   const supabase = await createClient()
 
   try {
+    await requireModulePermission(supabase, "inventory", "edit")
     await consumeInventoryQuery(supabase, validated.data)
   } catch (error) {
     return { error: error instanceof Error ? error.message : "Unable to record inventory consumption." }
@@ -40,6 +42,7 @@ export async function adjustInventory(input: AdjustInventoryInput): Promise<Inve
   const supabase = await createClient()
 
   try {
+    await requireModulePermission(supabase, "inventory", "edit")
     await adjustInventoryQuery(supabase, validated.data)
   } catch (error) {
     return { error: error instanceof Error ? error.message : "Unable to adjust inventory." }

@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache"
 
 import { createClient } from "@/lib/supabase/server"
+import { requireModulePermission } from "@/lib/supabase/permissions"
 import {
   createDocumentFolder as createDocumentFolderQuery,
   deleteDocumentFolder as deleteDocumentFolderQuery,
@@ -29,6 +30,7 @@ export async function createDocumentFolder(
 
   let folderId: string
   try {
+    await requireModulePermission(supabase, "documents", "create")
     folderId = await createDocumentFolderQuery(supabase, validated.data)
   } catch (error) {
     return { error: error instanceof Error ? error.message : "Unable to create folder." }
@@ -51,6 +53,7 @@ export async function updateDocumentFolder(
   const supabase = await createClient()
 
   try {
+    await requireModulePermission(supabase, "documents", "edit")
     await updateDocumentFolderQuery(supabase, id, validated.data)
   } catch (error) {
     return { error: error instanceof Error ? error.message : "Unable to update folder." }
@@ -65,6 +68,7 @@ export async function deleteDocumentFolder(id: string): Promise<DocumentFolderAc
   const supabase = await createClient()
 
   try {
+    await requireModulePermission(supabase, "documents", "delete")
     await deleteDocumentFolderQuery(supabase, id)
   } catch (error) {
     return { error: error instanceof Error ? error.message : "Unable to delete folder." }
@@ -81,6 +85,7 @@ export async function moveDocumentToFolder(
   const supabase = await createClient()
 
   try {
+    await requireModulePermission(supabase, "documents", "edit")
     await moveDocumentToFolderQuery(supabase, documentId, folderId)
   } catch (error) {
     return { error: error instanceof Error ? error.message : "Unable to move document." }

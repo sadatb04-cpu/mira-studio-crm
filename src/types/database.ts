@@ -951,6 +951,7 @@ export type Database = {
           is_active: boolean
           phone: string | null
           role: Database["public"]["Enums"]["user_role"]
+          special_permissions: Json
           updated_at: string
         }
         Insert: {
@@ -964,6 +965,7 @@ export type Database = {
           is_active?: boolean
           phone?: string | null
           role?: Database["public"]["Enums"]["user_role"]
+          special_permissions?: Json
           updated_at?: string
         }
         Update: {
@@ -977,6 +979,7 @@ export type Database = {
           is_active?: boolean
           phone?: string | null
           role?: Database["public"]["Enums"]["user_role"]
+          special_permissions?: Json
           updated_at?: string
         }
         Relationships: []
@@ -1166,6 +1169,50 @@ export type Database = {
           },
         ]
       }
+      user_permissions: {
+        Row: {
+          can_create: boolean
+          can_delete: boolean
+          can_edit: boolean
+          can_view: boolean
+          created_at: string
+          id: string
+          module: Database["public"]["Enums"]["permission_module"]
+          profile_id: string
+          updated_at: string
+        }
+        Insert: {
+          can_create?: boolean
+          can_delete?: boolean
+          can_edit?: boolean
+          can_view?: boolean
+          created_at?: string
+          id?: string
+          module: Database["public"]["Enums"]["permission_module"]
+          profile_id: string
+          updated_at?: string
+        }
+        Update: {
+          can_create?: boolean
+          can_delete?: boolean
+          can_edit?: boolean
+          can_view?: boolean
+          created_at?: string
+          id?: string
+          module?: Database["public"]["Enums"]["permission_module"]
+          profile_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_permissions_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -1266,6 +1313,19 @@ export type Database = {
         | "pricing_ready"
         | "awaiting_approval"
         | "approved"
+      permission_module:
+        | "dashboard"
+        | "orders"
+        | "quotations"
+        | "customers"
+        | "production"
+        | "inventory"
+        | "tasks"
+        | "documents"
+        | "employees"
+        | "attendance"
+        | "reports"
+        | "settings"
       production_job_status:
         | "queued"
         | "in_progress"
@@ -1541,6 +1601,20 @@ export const Constants = {
         "pricing_ready",
         "awaiting_approval",
         "approved",
+      ],
+      permission_module: [
+        "dashboard",
+        "orders",
+        "quotations",
+        "customers",
+        "production",
+        "inventory",
+        "tasks",
+        "documents",
+        "employees",
+        "attendance",
+        "reports",
+        "settings",
       ],
       production_job_status: [
         "queued",

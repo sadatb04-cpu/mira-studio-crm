@@ -4,8 +4,11 @@ import { createClient } from "@/lib/supabase/server"
 import { getOrderOptions, getProductionJobOptions } from "@/lib/supabase/tasks"
 import { getEmployees } from "@/lib/supabase/production"
 import { getSettingsBundle } from "@/lib/supabase/settings"
+import { requirePagePermission } from "@/lib/require-page-permission"
 
 export default async function NewTaskPage() {
+  await requirePagePermission("tasks", "create")
+
   const supabase = await createClient()
 
   const [employees, orders, productionJobs, settings] = await Promise.all([

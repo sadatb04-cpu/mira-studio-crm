@@ -4,6 +4,7 @@ import { redirect } from "next/navigation"
 import { revalidatePath } from "next/cache"
 
 import { createClient } from "@/lib/supabase/server"
+import { requireModulePermission } from "@/lib/supabase/permissions"
 import {
   createOrder as createOrderQuery,
   markOrderDelivered as markOrderDeliveredQuery,
@@ -43,6 +44,7 @@ export async function createOrder(input: OrderFormInput): Promise<OrderActionSta
 
   let orderId: string
   try {
+    await requireModulePermission(supabase, "orders", "create")
     orderId = await createOrderQuery(supabase, toWriteInput(validated.data))
   } catch (error) {
     return { error: error instanceof Error ? error.message : "Unable to create order." }
@@ -61,6 +63,7 @@ export async function updateOrder(orderId: string, input: OrderFormInput): Promi
   const supabase = await createClient()
 
   try {
+    await requireModulePermission(supabase, "orders", "edit")
     await updateOrderQuery(supabase, orderId, toWriteInput(validated.data))
   } catch (error) {
     return { error: error instanceof Error ? error.message : "Unable to update order." }
@@ -73,6 +76,7 @@ export async function markOrderDelivered(orderId: string): Promise<OrderActionSt
   const supabase = await createClient()
 
   try {
+    await requireModulePermission(supabase, "orders", "edit")
     await markOrderDeliveredQuery(supabase, orderId)
   } catch (error) {
     return { error: error instanceof Error ? error.message : "Unable to mark this order as delivered." }

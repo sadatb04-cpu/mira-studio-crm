@@ -9,12 +9,15 @@ import { TaskTimeline } from "@/components/tasks/task-timeline"
 import { createClient } from "@/lib/supabase/server"
 import { getTask, getTaskTimeline } from "@/lib/supabase/tasks"
 import { getEmployees } from "@/lib/supabase/production"
+import { requirePageView } from "@/lib/require-page-permission"
 
 interface TaskDetailPageProps {
   params: Promise<{ id: string }>
 }
 
 export default async function TaskDetailPage({ params }: TaskDetailPageProps) {
+  await requirePageView("tasks")
+
   const { id } = await params
   const supabase = await createClient()
 

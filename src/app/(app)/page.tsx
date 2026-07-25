@@ -13,10 +13,12 @@ import { CustomerChart } from "@/components/reports/customer-chart"
 import { TaskChart } from "@/components/reports/task-chart"
 import { EmployeeChart } from "@/components/reports/employee-chart"
 import { RecentActivity } from "@/components/reports/recent-activity"
+import { PermissionGate } from "@/components/providers/permission-gate"
 import { createClient } from "@/lib/supabase/server"
 import { getExecutiveDashboard } from "@/lib/supabase/dashboard"
 import { resolveDateRange } from "@/lib/supabase/reports"
 import { getSettingsBundle } from "@/lib/supabase/settings"
+import { requirePageView } from "@/lib/require-page-permission"
 import { DASHBOARD_DATE_RANGE_PRESETS } from "@/types/report"
 import type { DateRangePreset } from "@/types/report"
 
@@ -25,6 +27,8 @@ interface DashboardPageProps {
 }
 
 export default async function DashboardPage({ searchParams }: DashboardPageProps) {
+  await requirePageView("dashboard")
+
   const { preset: presetParam, from: fromParam, to: toParam } = await searchParams
   const supabase = await createClient()
 
@@ -54,14 +58,18 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
         <OrdersChart data={dashboard.orders} />
         <ProductionChart data={dashboard.production} />
         <CustomerChart points={dashboard.customerGrowth} />
-        <TaskChart data={dashboard.taskCompletion} />
+        <PermissionGate module="tasks" action="view">
+          <TaskChart data={dashboard.taskCompletion} />
+        </PermissionGate>
       </div>
 
       <EmployeeChart data={dashboard.employeeWorkload} />
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <InventoryAlertsCard items={dashboard.inventoryAlerts} />
-        <TodaysTasksCard tasks={dashboard.todaysTasks} />
+        <PermissionGate module="tasks" action="view">
+          <TodaysTasksCard tasks={dashboard.todaysTasks} />
+        </PermissionGate>
         <UpcomingOrdersCard orders={dashboard.upcomingOrders} />
         <RecentCustomersCard customers={dashboard.recentCustomers} />
       </div>

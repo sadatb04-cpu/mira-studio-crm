@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation"
 
 import { createClient } from "@/lib/supabase/server"
+import { requireModulePermission, requireSpecialPermission } from "@/lib/supabase/permissions"
 import {
   assignEmployee as assignEmployeeQuery,
   createProductionJob as createProductionJobQuery,
@@ -25,6 +26,7 @@ export async function createProductionJob(orderId: string): Promise<ProductionAc
 
   let jobIds: string[]
   try {
+    await requireSpecialPermission(supabase, "release_to_production")
     // createProductionJobQuery is idempotent: it checks for an existing
     // production_job per order_item and reuses it instead of inserting a
     // duplicate, so calling this again for an already-released order is safe.
@@ -50,6 +52,7 @@ export async function assignEmployee(jobId: string, employeeId: string): Promise
   const supabase = await createClient()
 
   try {
+    await requireModulePermission(supabase, "production", "edit")
     await assignEmployeeQuery(supabase, validated.data.job_id, validated.data.employee_id)
   } catch (error) {
     return { error: error instanceof Error ? error.message : "Unable to assign employee." }
@@ -71,6 +74,7 @@ export async function updateProductionStatus(
   const supabase = await createClient()
 
   try {
+    await requireModulePermission(supabase, "production", "edit")
     await updateStatusQuery(supabase, validated.data.job_id, validated.data.action)
   } catch (error) {
     return { error: error instanceof Error ? error.message : "Unable to update production status." }

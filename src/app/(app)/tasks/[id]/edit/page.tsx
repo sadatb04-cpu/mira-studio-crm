@@ -5,12 +5,15 @@ import { TaskForm } from "@/components/tasks/task-form"
 import { createClient } from "@/lib/supabase/server"
 import { getOrderOptions, getProductionJobOptions, getTask } from "@/lib/supabase/tasks"
 import { getEmployees } from "@/lib/supabase/production"
+import { requirePagePermission } from "@/lib/require-page-permission"
 
 interface EditTaskPageProps {
   params: Promise<{ id: string }>
 }
 
 export default async function EditTaskPage({ params }: EditTaskPageProps) {
+  await requirePagePermission("tasks", "edit")
+
   const { id } = await params
   const supabase = await createClient()
 

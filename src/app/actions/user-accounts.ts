@@ -3,7 +3,8 @@
 import { revalidatePath } from "next/cache"
 
 import { createClient } from "@/lib/supabase/server"
-import { createAdminClient, requireAdmin } from "@/lib/supabase/admin"
+import { createAdminClient } from "@/lib/supabase/admin"
+import { requireAdminOrSpecialPermission } from "@/lib/supabase/permissions"
 import {
   createUserAccount as createUserAccountQuery,
   resetUserPassword as resetUserPasswordQuery,
@@ -23,14 +24,15 @@ export async function createUserAccount(input: CreateUserAccountInput): Promise<
     return { error: validated.error.issues.map((issue) => issue.message).join(" ") }
   }
 
+  const supabase = await createClient()
+
   let admin: { id: string }
   try {
-    admin = await requireAdmin()
+    admin = await requireAdminOrSpecialPermission(supabase, "manage_users")
   } catch (error) {
     return { error: error instanceof Error ? error.message : "Not authorized." }
   }
 
-  const supabase = await createClient()
   const adminClient = createAdminClient()
 
   try {
@@ -43,14 +45,14 @@ export async function createUserAccount(input: CreateUserAccountInput): Promise<
 }
 
 export async function resetUserPassword(userId: string, email: string): Promise<UserAccountActionState> {
+  const supabase = await createClient()
+
   let admin: { id: string }
   try {
-    admin = await requireAdmin()
+    admin = await requireAdminOrSpecialPermission(supabase, "manage_users")
   } catch (error) {
     return { error: error instanceof Error ? error.message : "Not authorized." }
   }
-
-  const supabase = await createClient()
 
   try {
     await resetUserPasswordQuery(supabase, userId, email, admin.id)
@@ -62,14 +64,15 @@ export async function resetUserPassword(userId: string, email: string): Promise<
 }
 
 export async function setAccountStatus(userId: string, status: AccountStatus): Promise<UserAccountActionState> {
+  const supabase = await createClient()
+
   let admin: { id: string }
   try {
-    admin = await requireAdmin()
+    admin = await requireAdminOrSpecialPermission(supabase, "manage_users")
   } catch (error) {
     return { error: error instanceof Error ? error.message : "Not authorized." }
   }
 
-  const supabase = await createClient()
   const adminClient = createAdminClient()
 
   try {

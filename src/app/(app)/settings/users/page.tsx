@@ -6,8 +6,8 @@ import { PageHeader } from "@/components/shared/page-header"
 import { CreateUserDialog } from "@/components/settings/create-user-dialog"
 import { UserAccountsTable } from "@/components/settings/user-accounts-table"
 import { createClient } from "@/lib/supabase/server"
-import { getProfile } from "@/lib/supabase/profile"
 import { getUnlinkedEmployees, getUserAccounts } from "@/lib/supabase/user-accounts"
+import { getUserPermissions } from "@/lib/supabase/permissions"
 
 export default async function UsersSettingsPage() {
   const supabase = await createClient()
@@ -19,10 +19,11 @@ export default async function UsersSettingsPage() {
     redirect("/login")
   }
 
-  const profile = await getProfile(supabase, user.id)
+  const permissions = await getUserPermissions(supabase, user.id)
 
-  // Same admin-only gate as the parent Settings page.
-  if (profile.role !== "admin") {
+  // Admins always qualify; a non-admin can too if explicitly granted the
+  // "Manage Users" special permission.
+  if (!permissions.isAdmin && !permissions.special.manage_users) {
     notFound()
   }
 

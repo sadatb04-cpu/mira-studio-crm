@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation"
 
 import { createClient } from "@/lib/supabase/server"
+import { requireModuleOrSpecialPermission } from "@/lib/supabase/permissions"
 import {
   createEmployee as createEmployeeQuery,
   updateEmployee as updateEmployeeQuery,
@@ -25,6 +26,7 @@ export async function createEmployee(input: EmployeeFormInput): Promise<Employee
 
   let employeeId: string
   try {
+    await requireModuleOrSpecialPermission(supabase, "employees", "create", "manage_employees")
     employeeId = await createEmployeeQuery(supabase, validated.data)
   } catch (error) {
     return { error: error instanceof Error ? error.message : "Unable to create employee." }
@@ -43,6 +45,7 @@ export async function updateEmployee(id: string, input: EmployeeFormInput): Prom
   const supabase = await createClient()
 
   try {
+    await requireModuleOrSpecialPermission(supabase, "employees", "edit", "manage_employees")
     await updateEmployeeQuery(supabase, id, validated.data)
   } catch (error) {
     return { error: error instanceof Error ? error.message : "Unable to update employee." }

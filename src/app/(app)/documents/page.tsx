@@ -9,6 +9,7 @@ import { DocumentUploadDialog } from "@/components/documents/document-upload-dia
 import { FolderFormDialog } from "@/components/documents/folder-form-dialog"
 import { FolderCard } from "@/components/documents/folder-card"
 import { FolderSearchBar } from "@/components/documents/folder-search-bar"
+import { PermissionGate } from "@/components/providers/permission-gate"
 import { createClient } from "@/lib/supabase/server"
 import { getDocuments, getDocumentStats, getRelatedRecordOptions } from "@/lib/supabase/documents"
 import { getDocumentFolders } from "@/lib/supabase/document-folders"
@@ -66,10 +67,12 @@ export default async function DocumentsPage({ searchParams }: DocumentsPageProps
         title="Documents"
         description="Access official documents, logs, and billing files."
         actions={
-          <div className="flex items-center gap-2">
-            <FolderFormDialog mode="create" />
-            <DocumentUploadDialog orders={orders} customers={customers} productionJobs={productionJobs} folders={allFolders} />
-          </div>
+          <PermissionGate module="documents" action="create">
+            <div className="flex items-center gap-2">
+              <FolderFormDialog mode="create" />
+              <DocumentUploadDialog orders={orders} customers={customers} productionJobs={productionJobs} folders={allFolders} />
+            </div>
+          </PermissionGate>
         }
       />
 

@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react"
 
 import { Button } from "@/components/ui/button"
+import { useHasSpecialPermission } from "@/components/providers/permissions-provider"
 import { createProductionJob } from "@/app/actions/production"
 
 interface ReleaseToProductionButtonProps {
@@ -10,6 +11,7 @@ interface ReleaseToProductionButtonProps {
 }
 
 export function ReleaseToProductionButton({ orderId }: ReleaseToProductionButtonProps) {
+  const canRelease = useHasSpecialPermission("release_to_production")
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
 
@@ -25,6 +27,8 @@ export function ReleaseToProductionButton({ orderId }: ReleaseToProductionButton
       }
     })
   }
+
+  if (!canRelease) return null
 
   return (
     <div className="flex flex-col gap-2">

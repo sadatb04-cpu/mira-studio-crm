@@ -4,6 +4,7 @@ import Link from "next/link"
 import { PageHeader } from "@/components/shared/page-header"
 import { StatCard } from "@/components/shared/stat-card"
 import { Button } from "@/components/ui/button"
+import { PermissionGate } from "@/components/providers/permission-gate"
 import { createClient } from "@/lib/supabase/server"
 import { getEmployeeDashboardStats, getEmployees } from "@/lib/supabase/employees"
 import { EmployeeFilters } from "@/components/employees/employee-filters"
@@ -48,12 +49,14 @@ export default async function EmployeesPage({ searchParams }: EmployeesPageProps
         title="Employees"
         description="Manage workforce records, schedules, and permissions."
         actions={
-          <Button asChild size="sm">
-            <Link href="/employees/new">
-              <Plus className="size-3.5" data-icon="inline-start" />
-              New Employee
-            </Link>
-          </Button>
+          <PermissionGate module="employees" action="create" orSpecial="manage_employees">
+            <Button asChild size="sm">
+              <Link href="/employees/new">
+                <Plus className="size-3.5" data-icon="inline-start" />
+                New Employee
+              </Link>
+            </Button>
+          </PermissionGate>
         }
       />
 

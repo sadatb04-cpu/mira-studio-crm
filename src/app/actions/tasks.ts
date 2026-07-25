@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation"
 
 import { createClient } from "@/lib/supabase/server"
+import { requireModulePermission } from "@/lib/supabase/permissions"
 import {
   assignTask as assignTaskQuery,
   createTask as createTaskQuery,
@@ -28,6 +29,7 @@ export async function createTask(input: TaskFormInput): Promise<TaskActionState>
 
   let taskId: string
   try {
+    await requireModulePermission(supabase, "tasks", "create")
     taskId = await createTaskQuery(supabase, validated.data)
   } catch (error) {
     return { error: error instanceof Error ? error.message : "Unable to create task." }
@@ -46,6 +48,7 @@ export async function updateTask(id: string, input: TaskFormInput): Promise<Task
   const supabase = await createClient()
 
   try {
+    await requireModulePermission(supabase, "tasks", "edit")
     await updateTaskQuery(supabase, id, validated.data)
   } catch (error) {
     return { error: error instanceof Error ? error.message : "Unable to update task." }
@@ -64,6 +67,7 @@ export async function assignTask(taskId: string, employeeId: string): Promise<Ta
   const supabase = await createClient()
 
   try {
+    await requireModulePermission(supabase, "tasks", "edit")
     await assignTaskQuery(supabase, validated.data.task_id, validated.data.employee_id)
   } catch (error) {
     return { error: error instanceof Error ? error.message : "Unable to assign task." }
@@ -82,6 +86,7 @@ export async function updateTaskStatus(taskId: string, status: TaskStatus): Prom
   const supabase = await createClient()
 
   try {
+    await requireModulePermission(supabase, "tasks", "edit")
     await updateTaskStatusQuery(supabase, validated.data.task_id, validated.data.status)
   } catch (error) {
     return { error: error instanceof Error ? error.message : "Unable to update task status." }

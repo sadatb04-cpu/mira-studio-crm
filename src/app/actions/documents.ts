@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache"
 
 import { createClient } from "@/lib/supabase/server"
+import { requireModulePermission, requireSpecialPermission } from "@/lib/supabase/permissions"
 import {
   createDocumentRecord,
   deleteDocument as deleteDocumentQuery,
@@ -26,6 +27,7 @@ export async function createDocument(input: CreateDocumentInput): Promise<Docume
 
   let documentId: string
   try {
+    await requireModulePermission(supabase, "documents", "create")
     documentId = await createDocumentRecord(supabase, validated.data)
   } catch (error) {
     return { error: error instanceof Error ? error.message : "Unable to save document." }
@@ -35,10 +37,15 @@ export async function createDocument(input: CreateDocumentInput): Promise<Docume
   return { id: documentId }
 }
 
+// Gated by the "Delete Documents" special permission rather than the
+// documents module's own can_delete flag - that flag is reserved for
+// folder deletion (see document-folders.ts), keeping actual file deletion
+// (irreversible, removes the Storage object) behind its own explicit grant.
 export async function deleteDocument(id: string): Promise<DocumentActionState> {
   const supabase = await createClient()
 
   try {
+    await requireSpecialPermission(supabase, "delete_documents")
     await deleteDocumentQuery(supabase, id)
   } catch (error) {
     return { error: error instanceof Error ? error.message : "Unable to delete document." }
@@ -52,6 +59,7 @@ export async function downloadDocument(id: string): Promise<DocumentActionState 
   const supabase = await createClient()
 
   try {
+    await requireModulePermission(supabase, "documents", "view")
     const { signedUrl, fileName } = await getDownloadUrl(supabase, id)
     return { signedUrl, fileName }
   } catch (error) {

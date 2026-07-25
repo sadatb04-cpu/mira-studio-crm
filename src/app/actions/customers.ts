@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation"
 
 import { createClient } from "@/lib/supabase/server"
+import { requireModulePermission } from "@/lib/supabase/permissions"
 import {
   createCustomer as createCustomerQuery,
   updateCustomer as updateCustomerQuery,
@@ -25,6 +26,7 @@ export async function createCustomer(input: CustomerFormInput): Promise<Customer
 
   let customerId: string
   try {
+    await requireModulePermission(supabase, "customers", "create")
     customerId = await createCustomerQuery(supabase, validated.data)
   } catch (error) {
     return { error: error instanceof Error ? error.message : "Unable to create customer." }
@@ -43,6 +45,7 @@ export async function updateCustomer(id: string, input: CustomerFormInput): Prom
   const supabase = await createClient()
 
   try {
+    await requireModulePermission(supabase, "customers", "edit")
     await updateCustomerQuery(supabase, id, validated.data)
   } catch (error) {
     return { error: error instanceof Error ? error.message : "Unable to update customer." }
@@ -69,6 +72,7 @@ export async function quickAddCustomer(input: CustomerFormInput): Promise<QuickA
   const supabase = await createClient()
 
   try {
+    await requireModulePermission(supabase, "customers", "create")
     const customerId = await createCustomerQuery(supabase, validated.data)
     return { customer: { id: customerId, full_name: validated.data.full_name, company_name: null, email: validated.data.email || null } }
   } catch (error) {

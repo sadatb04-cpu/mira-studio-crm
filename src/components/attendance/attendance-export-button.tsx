@@ -4,6 +4,7 @@ import { useState, useTransition } from "react"
 import { Download } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
+import { useHasSpecialPermission } from "@/components/providers/permissions-provider"
 import { exportAttendanceHistoryCsv } from "@/app/actions/attendance"
 import type { AttendanceHistoryFilters } from "@/types/attendance"
 
@@ -12,6 +13,7 @@ interface AttendanceExportButtonProps {
 }
 
 export function AttendanceExportButton({ filters }: AttendanceExportButtonProps) {
+  const canExport = useHasSpecialPermission("export_reports")
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
 
@@ -36,6 +38,8 @@ export function AttendanceExportButton({ filters }: AttendanceExportButtonProps)
       URL.revokeObjectURL(url)
     })
   }
+
+  if (!canExport) return null
 
   return (
     <div className="flex flex-col items-end gap-1.5">
