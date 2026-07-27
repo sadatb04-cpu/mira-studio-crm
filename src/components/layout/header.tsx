@@ -3,8 +3,8 @@
 import { Menu } from "lucide-react";
 import { usePathname } from "next/navigation";
 
-import { signOut } from "@/app/actions/auth";
 import { Button } from "@/components/ui/button";
+import { UserMenu } from "@/components/layout/user-menu";
 import { navigationItems } from "@/config/navigation";
 import type { Profile } from "@/types/profile";
 
@@ -33,13 +33,8 @@ export function Header({ onMenuClick, profile }: HeaderProps) {
       <h1 className="text-sm font-semibold text-foreground">{activeItem?.label ?? "Mira Operations"}</h1>
 
       {profile && (
-        <div className="ml-auto flex items-center gap-3">
-          <span className="hidden text-sm text-muted-foreground sm:inline">{profile.full_name}</span>
-          <form action={signOut}>
-            <Button variant="ghost" size="sm" type="submit">
-              Sign out
-            </Button>
-          </form>
+        <div className="ml-auto flex items-center">
+          <UserMenu profile={profile} />
         </div>
       )}
     </header>

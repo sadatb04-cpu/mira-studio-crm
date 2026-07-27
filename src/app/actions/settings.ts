@@ -12,8 +12,8 @@ import {
   updateCompanyInfo as updateCompanyInfoQuery,
   updateUserPreferences as updateUserPreferencesQuery,
 } from "@/lib/supabase/settings"
-import { businessRulesSchema, changePasswordSchema, companyInfoSchema, userPreferencesSchema } from "@/lib/validations/settings"
-import type { BusinessRulesInput, ChangePasswordInput, CompanyInfoInput, UserPreferencesInput } from "@/lib/validations/settings"
+import { businessRulesSchema, companyInfoSchema, userPreferencesSchema } from "@/lib/validations/settings"
+import type { BusinessRulesInput, CompanyInfoInput, UserPreferencesInput } from "@/lib/validations/settings"
 
 export interface SettingsActionState {
   error?: string
@@ -97,37 +97,6 @@ export async function updateBusinessRules(input: BusinessRulesInput): Promise<Se
   }
 
   revalidatePath("/settings")
-  return {}
-}
-
-export async function changePassword(input: ChangePasswordInput): Promise<SettingsActionState> {
-  const validated = changePasswordSchema.safeParse(input)
-  if (!validated.success) {
-    return { error: validated.error.issues.map((issue) => issue.message).join(" ") }
-  }
-
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (!user) {
-    return { error: "You must be signed in." }
-  }
-
-  const { error } = await supabase.auth.updateUser({ password: validated.data.newPassword })
-  if (error) {
-    return { error: error.message }
-  }
-
-  await supabase.from("activity_logs").insert({
-    entity_type: "profile",
-    entity_id: user.id,
-    action: "password_changed",
-    description: "Password changed.",
-    actor_id: user.id,
-  })
-
   return {}
 }
 

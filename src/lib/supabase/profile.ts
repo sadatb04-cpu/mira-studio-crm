@@ -34,3 +34,28 @@ export async function ensureProfile(supabase: SupabaseClient, user: User) {
 
   if (error) throw error
 }
+
+// Verifies the current password by re-authenticating with it (Supabase has
+// no separate "check this password" endpoint) before setting the new one -
+// this re-auth issues a fresh session for the same user, it does not sign
+// anyone out. Best-effort activity logging never blocks the actual change.
+export async function changeOwnPassword(
+  supabase: SupabaseClient,
+  userId: string,
+  email: string,
+  input: { currentPassword: string; newPassword: string }
+): Promise<void> {
+  const { error: verifyError } = await supabase.auth.signInWithPassword({ email, password: input.currentPassword })
+  if (verifyError) throw new Error("Current password is incorrect.")
+
+  const { error } = await supabase.auth.updateUser({ password: input.newPassword })
+  if (error) throw error
+
+  await supabase.from("activity_logs").insert({
+    entity_type: "profile",
+    entity_id: userId,
+    action: "password_changed",
+    description: "Password changed.",
+    actor_id: userId,
+  })
+}

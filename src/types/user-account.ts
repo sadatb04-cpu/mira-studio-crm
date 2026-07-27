@@ -30,6 +30,7 @@ export interface UnlinkedEmployeeOption {
 export interface CreateUserAccountInput {
   fullName: string
   email: string
+  password: string
   role: UserRole
   department?: Department
   employeeId?: string

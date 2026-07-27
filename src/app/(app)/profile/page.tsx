@@ -1,8 +1,11 @@
+import Link from "next/link"
 import { redirect } from "next/navigation"
+import { KeyRound } from "lucide-react"
 
 import { PageHeader } from "@/components/shared/page-header"
 import { SectionCard } from "@/components/shared/section-card"
 import { StatusBadge } from "@/components/shared/status-badge"
+import { Button } from "@/components/ui/button"
 import { createClient } from "@/lib/supabase/server"
 import { getProfile } from "@/lib/supabase/profile"
 import { DEPARTMENT_LABELS, USER_ROLE_LABELS } from "@/types/profile"
@@ -33,7 +36,15 @@ export default async function ProfilePage() {
         title="Profile"
         description="Your account details."
         actions={
-          <StatusBadge label={profile.is_active ? "Active" : "Inactive"} tone={profile.is_active ? "success" : "danger"} />
+          <div className="flex items-center gap-2">
+            <StatusBadge label={profile.is_active ? "Active" : "Inactive"} tone={profile.is_active ? "success" : "danger"} />
+            <Button asChild size="sm" variant="outline">
+              <Link href="/profile/change-password">
+                <KeyRound className="size-3.5" data-icon="inline-start" />
+                Change Password
+              </Link>
+            </Button>
+          </div>
         }
       />
       <SectionCard>

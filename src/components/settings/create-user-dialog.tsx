@@ -2,7 +2,8 @@
 
 import { useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
-import { Loader2, Plus } from "lucide-react"
+import { toast } from "sonner"
+import { Loader2, Plus, Wand2 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -24,6 +25,16 @@ import type { UnlinkedEmployeeOption } from "@/types/user-account"
 const selectClassName =
   "h-8 w-full rounded-lg border border-input bg-background px-2 text-sm text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30"
 
+const PASSWORD_WORDS = ["Mira", "Studio", "Work", "Atelier", "Forge", "Gem"]
+const PASSWORD_SYMBOLS = ["@", "#", "!", "$"]
+
+function generatePassword(): string {
+  const word = PASSWORD_WORDS[Math.floor(Math.random() * PASSWORD_WORDS.length)]
+  const symbol = PASSWORD_SYMBOLS[Math.floor(Math.random() * PASSWORD_SYMBOLS.length)]
+  const digits = Math.floor(1000 + Math.random() * 9000)
+  return `${word}${symbol}${digits}`
+}
+
 interface CreateUserDialogProps {
   unlinkedEmployees: UnlinkedEmployeeOption[]
 }
@@ -33,6 +44,8 @@ export function CreateUserDialog({ unlinkedEmployees }: CreateUserDialogProps) {
   const [open, setOpen] = useState(false)
   const [fullName, setFullName] = useState("")
   const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
+  const [confirmPassword, setConfirmPassword] = useState("")
   const [role, setRole] = useState<UserRole>("employee")
   const [department, setDepartment] = useState<Department | "">("")
   const [employeeId, setEmployeeId] = useState("")
@@ -42,10 +55,18 @@ export function CreateUserDialog({ unlinkedEmployees }: CreateUserDialogProps) {
   function reset() {
     setFullName("")
     setEmail("")
+    setPassword("")
+    setConfirmPassword("")
     setRole("employee")
     setDepartment("")
     setEmployeeId("")
     setError(null)
+  }
+
+  function handleGeneratePassword() {
+    const generated = generatePassword()
+    setPassword(generated)
+    setConfirmPassword(generated)
   }
 
   function handleSubmit() {
@@ -59,11 +80,21 @@ export function CreateUserDialog({ unlinkedEmployees }: CreateUserDialogProps) {
       setError("Email is required.")
       return
     }
+    if (password.trim() === "") {
+      setError("Password is required.")
+      return
+    }
+    if (password !== confirmPassword) {
+      setError("Passwords do not match.")
+      return
+    }
 
     startTransition(async () => {
       const result = await createUserAccount({
         fullName,
         email,
+        password,
+        confirmPassword,
         role,
         department: department || undefined,
         employeeId: employeeId || undefined,
@@ -77,6 +108,7 @@ export function CreateUserDialog({ unlinkedEmployees }: CreateUserDialogProps) {
       setOpen(false)
       reset()
       router.refresh()
+      toast.success(`Account created for ${fullName}.`)
     })
   }
 
@@ -99,7 +131,7 @@ export function CreateUserDialog({ unlinkedEmployees }: CreateUserDialogProps) {
         <DialogHeader>
           <DialogTitle>Create User Account</DialogTitle>
           <DialogDescription>
-            Sends an email invite - the person sets their own password. No credentials are handled here.
+            This is an internal CRM - accounts are created and managed directly by administrators.
           </DialogDescription>
         </DialogHeader>
 
@@ -117,6 +149,40 @@ export function CreateUserDialog({ unlinkedEmployees }: CreateUserDialogProps) {
             </Label>
             <Input id="email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} />
           </div>
+
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="flex flex-col gap-1.5">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="password">
+                  Password<span className="text-destructive">*</span>
+                </Label>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-auto gap-1 px-1.5 py-0.5 text-xs"
+                  onClick={handleGeneratePassword}
+                >
+                  <Wand2 className="size-3" />
+                  Generate
+                </Button>
+              </div>
+              <Input id="password" type="text" value={password} onChange={(event) => setPassword(event.target.value)} />
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="confirm-password">
+                Confirm Password<span className="text-destructive">*</span>
+              </Label>
+              <Input
+                id="confirm-password"
+                type="text"
+                value={confirmPassword}
+                onChange={(event) => setConfirmPassword(event.target.value)}
+              />
+            </div>
+          </div>
+          <p className="-mt-2 text-xs text-muted-foreground">At least 8 characters, including one letter and one number.</p>
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="flex flex-col gap-1.5">
@@ -156,7 +222,7 @@ export function CreateUserDialog({ unlinkedEmployees }: CreateUserDialogProps) {
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="link-employee">Link to Employee</Label>
+            <Label htmlFor="link-employee">Link Employee</Label>
             <select
               id="link-employee"
               value={employeeId}
@@ -185,7 +251,7 @@ export function CreateUserDialog({ unlinkedEmployees }: CreateUserDialogProps) {
           </Button>
           <Button type="button" onClick={handleSubmit} disabled={isPending}>
             {isPending && <Loader2 className="size-3.5 animate-spin" data-icon="inline-start" />}
-            {isPending ? "Sending Invite..." : "Send Invite"}
+            {isPending ? "Creating..." : "Create User"}
           </Button>
         </DialogFooter>
       </DialogContent>

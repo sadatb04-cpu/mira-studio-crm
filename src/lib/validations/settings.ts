@@ -52,15 +52,3 @@ export const businessRulesSchema = z.object({
 })
 
 export type BusinessRulesInput = z.infer<typeof businessRulesSchema>
-
-export const changePasswordSchema = z
-  .object({
-    newPassword: z.string().min(8, { error: "Password must be at least 8 characters." }),
-    confirmPassword: z.string(),
-  })
-  .refine((data) => data.newPassword === data.confirmPassword, {
-    error: "Passwords do not match.",
-    path: ["confirmPassword"],
-  })
-
-export type ChangePasswordInput = z.infer<typeof changePasswordSchema>

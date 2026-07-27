@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js"
 
 import type { AccountStatus, CreateUserAccountInput, UnlinkedEmployeeOption, UserAccountListItem } from "@/types/user-account"
+import type { UserRole } from "@/types/profile"
 
 async function logActivity(
   supabase: SupabaseClient,
@@ -51,25 +52,31 @@ export async function getUnlinkedEmployees(supabase: SupabaseClient): Promise<Un
     .sort((a, b) => a.full_name.localeCompare(b.full_name))
 }
 
-// Creates a real CRM login by inviting the person via Supabase Auth (they
-// set their own password from the invite email - the admin never handles
-// a plaintext credential). adminClient must come from createAdminClient()
-// and the caller must already have passed requireAdmin().
+// Creates the login directly - this is an internal-operations CRM, not a
+// public SaaS product, so accounts are created and controlled exclusively
+// by admins. No invitation email is ever sent; the admin-provided password
+// is handed straight to the Auth Admin API and never stored or displayed
+// again after this call returns. adminClient must come from
+// createAdminClient() and the caller must already have passed
+// requireAdmin()/requireAdminOrSpecialPermission().
 export async function createUserAccount(
   adminClient: SupabaseClient,
   supabase: SupabaseClient,
   input: CreateUserAccountInput,
   actorId: string
 ): Promise<string> {
-  const { data: inviteData, error: inviteError } = await adminClient.auth.admin.inviteUserByEmail(input.email, {
-    data: { full_name: input.fullName },
+  const { data: createData, error: createError } = await adminClient.auth.admin.createUser({
+    email: input.email,
+    password: input.password,
+    email_confirm: true,
+    user_metadata: { full_name: input.fullName },
   })
 
-  if (inviteError || !inviteData.user) {
-    throw new Error(inviteError?.message ?? "Unable to invite user.")
+  if (createError || !createData.user) {
+    throw new Error(createError?.message ?? "Unable to create user.")
   }
 
-  const newUserId = inviteData.user.id
+  const newUserId = createData.user.id
 
   const { error: profileError } = await supabase.from("profiles").insert({
     id: newUserId,
@@ -77,11 +84,11 @@ export async function createUserAccount(
     email: input.email,
     role: input.role,
     department: input.department || null,
-    account_status: "pending_invite",
+    account_status: "active",
   })
 
   if (profileError) {
-    // Roll back the auth user so this doesn't leave an orphaned invite
+    // Roll back the auth user so this doesn't leave an orphaned login
     // with no matching profile.
     await adminClient.auth.admin.deleteUser(newUserId)
     throw profileError
@@ -95,30 +102,52 @@ export async function createUserAccount(
   await logActivity(supabase, {
     entity_id: newUserId,
     action: "user_created",
-    description: `Invited ${input.fullName} (${input.email}) as ${input.role}.`,
+    description: `Created account for ${input.fullName} (${input.email}) as ${input.role}.`,
     actor_id: actorId,
   })
 
   return newUserId
 }
 
-// resetPasswordForEmail is available on the regular (non-admin) client -
-// it triggers Supabase's own configured recovery email flow. Gating this
-// to admins happens at the server-action layer (requireAdmin()), not
-// because the call itself needs the service-role key.
+// Admin assigns the new password directly via the Auth Admin API - no
+// reset email is sent, and the password is never stored or displayed
+// anywhere after this call returns.
 export async function resetUserPassword(
+  adminClient: SupabaseClient,
   supabase: SupabaseClient,
   targetUserId: string,
-  targetEmail: string,
+  newPassword: string,
   actorId: string
 ): Promise<void> {
-  const { error } = await supabase.auth.resetPasswordForEmail(targetEmail)
+  const { error } = await adminClient.auth.admin.updateUserById(targetUserId, { password: newPassword })
   if (error) throw error
 
   await logActivity(supabase, {
     entity_id: targetUserId,
-    action: "password_reset_requested",
-    description: `Password reset email sent to ${targetEmail}.`,
+    action: "password_reset",
+    description: "Password reset by an administrator.",
+    actor_id: actorId,
+  })
+}
+
+export async function updateUserRole(
+  supabase: SupabaseClient,
+  targetUserId: string,
+  role: UserRole,
+  actorId: string
+): Promise<void> {
+  const { data: existing, error: fetchError } = await supabase.from("profiles").select("role").eq("id", targetUserId).single()
+  if (fetchError) throw fetchError
+
+  if (existing.role === role) return
+
+  const { error } = await supabase.from("profiles").update({ role }).eq("id", targetUserId)
+  if (error) throw error
+
+  await logActivity(supabase, {
+    entity_id: targetUserId,
+    action: "role_changed",
+    description: `Role changed from ${existing.role} to ${role}.`,
     actor_id: actorId,
   })
 }

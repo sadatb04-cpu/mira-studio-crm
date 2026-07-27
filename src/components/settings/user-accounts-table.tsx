@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
 import { format } from "date-fns"
+import { toast } from "sonner"
 import { KeyRound, Loader2, PauseCircle, ShieldCheck, ShieldOff, Users } from "lucide-react"
 
 import { SectionCard } from "@/components/shared/section-card"
@@ -10,9 +11,14 @@ import { EmptyState } from "@/components/shared/empty-state"
 import { Button } from "@/components/ui/button"
 import { ConfirmDialog } from "@/components/shared/confirm-dialog"
 import { AccountStatusBadge } from "@/components/settings/account-status-badge"
-import { resetUserPassword, setAccountStatus } from "@/app/actions/user-accounts"
-import { USER_ROLE_LABELS } from "@/types/profile"
+import { ResetPasswordDialog } from "@/components/settings/reset-password-dialog"
+import { setAccountStatus, updateUserRole } from "@/app/actions/user-accounts"
+import { USER_ROLES, USER_ROLE_LABELS } from "@/types/profile"
+import type { UserRole } from "@/types/profile"
 import type { AccountStatus, UserAccountListItem } from "@/types/user-account"
+
+const selectClassName =
+  "h-8 rounded-lg border border-input bg-background px-2 text-sm text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30"
 
 interface UserAccountsTableProps {
   accounts: UserAccountListItem[]
@@ -20,22 +26,26 @@ interface UserAccountsTableProps {
 
 export function UserAccountsTable({ accounts }: UserAccountsTableProps) {
   const router = useRouter()
-  const [pendingId, setPendingId] = useState<string | null>(null)
+  const [resetTarget, setResetTarget] = useState<{ id: string; name: string } | null>(null)
+  const [roleUpdatingId, setRoleUpdatingId] = useState<string | null>(null)
   const [confirmTarget, setConfirmTarget] = useState<{ id: string; name: string; status: AccountStatus } | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
 
-  function handleResetPassword(account: UserAccountListItem) {
+  function handleRoleChange(account: UserAccountListItem, role: UserRole) {
+    if (role === account.role) return
+
     setError(null)
-    setPendingId(account.id)
+    setRoleUpdatingId(account.id)
     startTransition(async () => {
-      const result = await resetUserPassword(account.id, account.email)
-      setPendingId(null)
+      const result = await updateUserRole(account.id, { role })
+      setRoleUpdatingId(null)
       if (result.error) {
         setError(result.error)
         return
       }
       router.refresh()
+      toast.success(`${account.full_name}'s role updated to ${USER_ROLE_LABELS[role]}.`)
     })
   }
 
@@ -49,8 +59,10 @@ export function UserAccountsTable({ accounts }: UserAccountsTableProps) {
         setConfirmTarget(null)
         return
       }
+      const target = confirmTarget
       setConfirmTarget(null)
       router.refresh()
+      toast.success(`${target.name}'s account is now ${target.status}.`)
     })
   }
 
@@ -82,7 +94,23 @@ export function UserAccountsTable({ accounts }: UserAccountsTableProps) {
               <tr key={account.id} className="border-b border-border last:border-0">
                 <td className="px-4 py-2.5 font-medium text-foreground">{account.full_name}</td>
                 <td className="px-4 py-2.5 text-muted-foreground">{account.email}</td>
-                <td className="px-4 py-2.5 text-muted-foreground">{USER_ROLE_LABELS[account.role]}</td>
+                <td className="px-4 py-2.5">
+                  <div className="flex items-center gap-1.5">
+                    <select
+                      value={account.role}
+                      onChange={(event) => handleRoleChange(account, event.target.value as UserRole)}
+                      disabled={isPending && roleUpdatingId === account.id}
+                      className={selectClassName}
+                    >
+                      {USER_ROLES.map((value) => (
+                        <option key={value} value={value}>
+                          {USER_ROLE_LABELS[value]}
+                        </option>
+                      ))}
+                    </select>
+                    {isPending && roleUpdatingId === account.id && <Loader2 className="size-3.5 animate-spin text-muted-foreground" />}
+                  </div>
+                </td>
                 <td className="px-4 py-2.5 text-muted-foreground">{account.linkedEmployee?.full_name ?? "—"}</td>
                 <td className="px-4 py-2.5">
                   <AccountStatusBadge status={account.accountStatus} />
@@ -94,15 +122,10 @@ export function UserAccountsTable({ accounts }: UserAccountsTableProps) {
                       type="button"
                       variant="ghost"
                       size="icon-sm"
-                      title="Send password reset email"
-                      disabled={isPending && pendingId === account.id}
-                      onClick={() => handleResetPassword(account)}
+                      title="Reset password"
+                      onClick={() => setResetTarget({ id: account.id, name: account.full_name })}
                     >
-                      {isPending && pendingId === account.id ? (
-                        <Loader2 className="size-3.5 animate-spin" />
-                      ) : (
-                        <KeyRound className="size-3.5" />
-                      )}
+                      <KeyRound className="size-3.5" />
                     </Button>
 
                     {account.accountStatus !== "active" && (
@@ -149,6 +172,15 @@ export function UserAccountsTable({ accounts }: UserAccountsTableProps) {
       </SectionCard>
 
       {error && <p className="mt-2 text-sm text-destructive">{error}</p>}
+
+      {resetTarget && (
+        <ResetPasswordDialog
+          userId={resetTarget.id}
+          userName={resetTarget.name}
+          open={resetTarget !== null}
+          onOpenChange={(next) => !next && setResetTarget(null)}
+        />
+      )}
 
       <ConfirmDialog
         open={confirmTarget !== null}
