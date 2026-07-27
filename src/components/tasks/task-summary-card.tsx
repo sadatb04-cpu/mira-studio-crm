@@ -12,7 +12,7 @@ import { TASK_PRIORITY_LABELS, TASK_STATUSES, TASK_STATUS_LABELS } from "@/types
 import type { TaskDetail, TaskStatus } from "@/types/task"
 
 const selectClassName =
-  "h-8 rounded-lg border border-input bg-background px-2 text-sm text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30"
+  "h-8 rounded-lg border border-input bg-input backdrop-blur-sm px-2 text-sm text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30"
 
 function formatDate(value: string | null) {
   return value ? format(new Date(value), "MMM d, yyyy") : "Not set"

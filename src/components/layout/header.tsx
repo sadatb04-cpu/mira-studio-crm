@@ -1,10 +1,13 @@
 "use client";
 
-import { Menu } from "lucide-react";
+import { Bell, ChevronRight, Home, Menu } from "lucide-react";
+import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { UserMenu } from "@/components/layout/user-menu";
+import { CommandSearch } from "@/components/layout/command-search";
 import { navigationItems } from "@/config/navigation";
 import type { Profile } from "@/types/profile";
 
@@ -20,7 +23,7 @@ export function Header({ onMenuClick, profile }: HeaderProps) {
   );
 
   return (
-    <header className="flex h-14 items-center gap-3 border-b border-border bg-background px-4">
+    <header className="flex h-14 shrink-0 items-center gap-3 rounded-t-2xl border-b border-border/70 bg-transparent px-4">
       <Button
         variant="ghost"
         size="icon"
@@ -30,13 +33,44 @@ export function Header({ onMenuClick, profile }: HeaderProps) {
       >
         <Menu className="size-4" />
       </Button>
-      <h1 className="text-sm font-semibold text-foreground">{activeItem?.label ?? "Mira Operations"}</h1>
 
-      {profile && (
-        <div className="ml-auto flex items-center">
-          <UserMenu profile={profile} />
-        </div>
-      )}
+      <nav aria-label="Breadcrumb" className="flex min-w-0 items-center gap-1.5 text-sm">
+        <Link href="/" className="flex items-center text-muted-foreground hover:text-foreground">
+          <Home className="size-3.5" />
+        </Link>
+        {activeItem && activeItem.href !== "/" && (
+          <>
+            <ChevronRight className="size-3.5 shrink-0 text-muted-foreground/50" />
+            <span className="truncate font-semibold text-foreground">{activeItem.label}</span>
+          </>
+        )}
+        {(!activeItem || activeItem.href === "/") && (
+          <span className="truncate font-semibold text-foreground">Dashboard</span>
+        )}
+      </nav>
+
+      <div className="ml-auto flex items-center gap-2">
+        <CommandSearch role={profile?.role} />
+
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button variant="ghost" size="icon" aria-label="Notifications">
+              <Bell className="size-4" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent>
+            <div className="flex flex-col items-center gap-2 py-6 text-center">
+              <span className="flex size-9 items-center justify-center rounded-full bg-muted">
+                <Bell className="size-4 text-muted-foreground" />
+              </span>
+              <p className="text-sm font-medium text-foreground">You&apos;re all caught up</p>
+              <p className="text-xs text-muted-foreground">No new notifications right now.</p>
+            </div>
+          </PopoverContent>
+        </Popover>
+
+        {profile && <UserMenu profile={profile} />}
+      </div>
     </header>
   );
 }

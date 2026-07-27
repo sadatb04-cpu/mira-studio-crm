@@ -10,7 +10,7 @@ import { INVENTORY_CATEGORIES, INVENTORY_CATEGORY_LABELS, STOCK_STATUS_LABELS } 
 const STOCK_STATUS_OPTIONS = ["in_stock", "low_stock", "out_of_stock"] as const
 
 const selectClassName =
-  "h-8 rounded-lg border border-input bg-background px-2 text-sm text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30"
+  "h-8 rounded-lg border border-input bg-input backdrop-blur-sm px-2 text-sm text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30"
 
 export function InventoryFilters() {
   const router = useRouter()

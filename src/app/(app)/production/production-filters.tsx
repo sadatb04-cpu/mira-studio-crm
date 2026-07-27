@@ -12,7 +12,7 @@ import { PRODUCTION_JOB_STATUS_LABELS, PRODUCTION_PRIORITIES, PRODUCTION_PRIORIT
 const FILTERABLE_STATUSES = ["queued", "in_progress", "quality_check", "completed", "cancelled"] as const
 
 const selectClassName =
-  "h-8 rounded-lg border border-input bg-background px-2 text-sm text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30"
+  "h-8 rounded-lg border border-input bg-input backdrop-blur-sm px-2 text-sm text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30"
 
 export function ProductionFilters() {
   const router = useRouter()

@@ -18,7 +18,7 @@ import type { UserRole } from "@/types/profile"
 import type { AccountStatus, UserAccountListItem } from "@/types/user-account"
 
 const selectClassName =
-  "h-8 rounded-lg border border-input bg-background px-2 text-sm text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30"
+  "h-8 rounded-lg border border-input bg-input backdrop-blur-sm px-2 text-sm text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30"
 
 interface UserAccountsTableProps {
   accounts: UserAccountListItem[]

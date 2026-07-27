@@ -41,7 +41,7 @@ export function InventoryTransactionTable({ transactions }: InventoryTransaction
               <td
                 className={cn(
                   "px-4 py-2.5 text-right font-medium",
-                  transaction.quantity >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-destructive"
+                  transaction.quantity >= 0 ? "text-success" : "text-destructive"
                 )}
               >
                 {transaction.quantity >= 0 ? "+" : ""}

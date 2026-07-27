@@ -14,7 +14,7 @@ import { QUOTATION_COST_FIELDS, QUOTATION_STATUSES, QUOTATION_STATUS_LABELS } fr
 import type { Quotation, QuotationStatus } from "@/types/quotation"
 
 const selectClassName =
-  "h-8 rounded-lg border border-input bg-background px-2 text-sm text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30"
+  "h-8 rounded-lg border border-input bg-input backdrop-blur-sm px-2 text-sm text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30"
 
 function formatCurrency(amount: number) {
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(amount)

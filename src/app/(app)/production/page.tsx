@@ -34,7 +34,7 @@ export default async function ProductionPage({ searchParams }: ProductionPagePro
   return (
     <div className="flex flex-1 flex-col gap-6 p-6">
       {releasedCount > 0 && (
-        <p className="rounded-lg bg-emerald-500/10 px-3 py-2 text-sm text-emerald-600 dark:text-emerald-400">
+        <p className="rounded-lg bg-success/10 px-3 py-2 text-sm text-success">
           {releasedCount} production jobs created for this order.
         </p>
       )}

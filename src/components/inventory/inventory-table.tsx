@@ -23,7 +23,7 @@ function formatDate(value: string) {
 // Out of Stock gets the more saturated tint - highest visual priority.
 const ROW_TONE: Partial<Record<StockStatus, string>> = {
   out_of_stock: "bg-destructive/10",
-  low_stock: "bg-amber-500/5",
+  low_stock: "bg-warning/5",
 }
 
 interface InventoryTableProps {

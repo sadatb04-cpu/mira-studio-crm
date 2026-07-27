@@ -36,12 +36,23 @@ function StatCard({ label, value, icon: Icon, trend, description, isLoading, cla
     trend?.direction === "down" ? ArrowDown : trend?.direction === "neutral" ? ArrowRight : ArrowUp
 
   return (
-    <Card className={className}>
+    <Card
+      className={cn(
+        "group/stat relative overflow-hidden hover:-translate-y-0.5 hover:shadow-xl hover:shadow-primary/10",
+        className
+      )}
+    >
+      <div
+        className="pointer-events-none absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r from-primary/0 via-primary to-brand-secondary/0 opacity-0 transition-opacity duration-150 ease-premium group-hover/stat:opacity-100"
+        aria-hidden="true"
+      />
       <CardHeader>
         <CardTitle className="text-sm font-medium text-muted-foreground">{label}</CardTitle>
         {Icon && (
           <CardAction>
-            <Icon className="size-4 text-muted-foreground" />
+            <span className="flex size-8 items-center justify-center rounded-xl bg-gradient-to-br from-primary/20 to-brand-secondary/10 text-primary shadow-[0_0_12px_-4px_var(--primary)]">
+              <Icon className="size-4" />
+            </span>
           </CardAction>
         )}
       </CardHeader>
@@ -53,7 +64,7 @@ function StatCard({ label, value, icon: Icon, trend, description, isLoading, cla
               <span
                 className={cn(
                   "inline-flex items-center gap-0.5 font-medium",
-                  trend.direction === "up" && "text-emerald-600 dark:text-emerald-400",
+                  trend.direction === "up" && "text-success",
                   trend.direction === "down" && "text-destructive",
                   (!trend.direction || trend.direction === "neutral") && "text-muted-foreground"
                 )}

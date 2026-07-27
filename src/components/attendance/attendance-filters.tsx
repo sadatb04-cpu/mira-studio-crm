@@ -10,7 +10,7 @@ import { ATTENDANCE_STATUSES, ATTENDANCE_STATUS_LABELS } from "@/types/attendanc
 import type { AttendanceEmployeeOption } from "@/types/attendance"
 
 const selectClassName =
-  "h-8 rounded-lg border border-input bg-background px-2 text-sm text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30"
+  "h-8 rounded-lg border border-input bg-input backdrop-blur-sm px-2 text-sm text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30"
 
 interface AttendanceFiltersProps {
   employees: AttendanceEmployeeOption[]

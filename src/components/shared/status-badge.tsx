@@ -1,7 +1,7 @@
 import { cn } from "@/lib/utils"
 import { Badge } from "@/components/ui/badge"
 
-type StatusTone = "neutral" | "info" | "success" | "warning" | "danger"
+type StatusTone = "neutral" | "info" | "success" | "warning" | "danger" | "pending"
 
 interface StatusBadgeProps {
   label: string
@@ -9,20 +9,22 @@ interface StatusBadgeProps {
   className?: string
 }
 
-const TONE_TO_VARIANT: Record<StatusTone, "outline" | "info" | "success" | "warning" | "destructive"> = {
+const TONE_TO_VARIANT: Record<StatusTone, "outline" | "info" | "success" | "warning" | "destructive" | "pending"> = {
   neutral: "outline",
   info: "info",
   success: "success",
   warning: "warning",
   danger: "destructive",
+  pending: "pending",
 }
 
 const TONE_TO_DOT_CLASS: Record<StatusTone, string> = {
   neutral: "bg-muted-foreground",
-  info: "bg-blue-500",
-  success: "bg-emerald-500",
-  warning: "bg-amber-500",
+  info: "bg-info",
+  success: "bg-success",
+  warning: "bg-warning",
   danger: "bg-destructive",
+  pending: "bg-pending",
 }
 
 function StatusBadge({ label, tone = "neutral", className }: StatusBadgeProps) {

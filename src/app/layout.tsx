@@ -3,13 +3,21 @@ import { Geist, Geist_Mono, Inter } from "next/font/google";
 import { Toaster } from "sonner";
 import "./globals.css";
 import { cn } from "@/lib/utils";
+import { ThemeProvider } from "@/lib/theme";
+import { AuroraBackground } from "@/components/layout/aurora-background";
+
+const LIGHT_THEMES = ["rose-gold", "arctic"];
 
 const THEME_INIT_SCRIPT = `
 (function () {
   try {
-    var theme = localStorage.getItem("mira-theme");
-    var isDark = theme === "dark" || ((theme === "system" || !theme) && window.matchMedia("(prefers-color-scheme: dark)").matches);
-    if (isDark) document.documentElement.classList.add("dark");
+    var lightThemes = ${JSON.stringify(LIGHT_THEMES)};
+    var theme = localStorage.getItem("mira-theme") || "midnight";
+    if (lightThemes.indexOf(theme) === -1 && ["midnight","royal-purple","emerald","sapphire","carbon"].indexOf(theme) === -1) {
+      theme = "midnight";
+    }
+    document.documentElement.setAttribute("data-theme", theme);
+    if (lightThemes.indexOf(theme) === -1) document.documentElement.classList.add("dark");
   } catch (e) {}
 })();
 `;
@@ -48,8 +56,11 @@ export default function RootLayout({
           suppressHydrationWarning
           dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }}
         />
-        {children}
-        <Toaster position="bottom-right" theme="system" />
+        <ThemeProvider>
+          <AuroraBackground />
+          {children}
+          <Toaster position="bottom-right" theme="system" />
+        </ThemeProvider>
       </body>
     </html>
   );

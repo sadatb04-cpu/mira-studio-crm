@@ -127,13 +127,3 @@ export interface DatabaseSummary {
   employees: number
   documents: number
 }
-
-export type ThemePreference = "light" | "dark" | "system"
-
-export const THEME_OPTIONS: ThemePreference[] = ["light", "dark", "system"]
-
-export const THEME_LABELS: Record<ThemePreference, string> = {
-  light: "Light",
-  dark: "Dark",
-  system: "System",
-}

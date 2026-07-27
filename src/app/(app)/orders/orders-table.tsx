@@ -9,6 +9,7 @@ import { SectionCard } from "@/components/shared/section-card"
 import { StatusBadge } from "@/components/shared/status-badge"
 import type { StatusTone } from "@/components/shared/status-badge"
 import { EmptyState } from "@/components/shared/empty-state"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { ORDER_STATUS_LABELS } from "@/types/order"
 import type { OrderListItem, OrderStatus } from "@/types/order"
 
@@ -53,28 +54,24 @@ export function OrdersTable({ orders }: OrdersTableProps) {
   }
 
   return (
-    <SectionCard contentClassName="overflow-x-auto px-0">
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="border-b border-border text-left text-xs font-medium text-muted-foreground">
-            <th className="px-4 py-2">Order #</th>
-            <th className="px-4 py-2">Customer</th>
-            <th className="px-4 py-2">Status</th>
-            <th className="px-4 py-2">Items</th>
-            <th className="px-4 py-2">Stones</th>
-            <th className="px-4 py-2">Order Date</th>
-            <th className="px-4 py-2">Due Date</th>
-            <th className="px-4 py-2 text-right">Total</th>
-          </tr>
-        </thead>
-        <tbody>
+    <SectionCard contentClassName="px-0">
+      <Table>
+        <TableHeader>
+          <TableRow className="odd:bg-transparent even:bg-transparent hover:bg-transparent">
+            <TableHead>Order #</TableHead>
+            <TableHead>Customer</TableHead>
+            <TableHead>Status</TableHead>
+            <TableHead>Items</TableHead>
+            <TableHead>Stones</TableHead>
+            <TableHead>Order Date</TableHead>
+            <TableHead>Due Date</TableHead>
+            <TableHead className="text-right">Total</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
           {orders.map((order) => (
-            <tr
-              key={order.id}
-              onClick={() => router.push(`/orders/${order.id}`)}
-              className="cursor-pointer border-b border-border last:border-0 hover:bg-muted/50"
-            >
-              <td className="px-4 py-2.5 font-medium text-foreground">
+            <TableRow key={order.id} onClick={() => router.push(`/orders/${order.id}`)} className="cursor-pointer">
+              <TableCell className="font-medium text-foreground">
                 <Link
                   href={`/orders/${order.id}`}
                   onClick={(event) => event.stopPropagation()}
@@ -82,26 +79,26 @@ export function OrdersTable({ orders }: OrdersTableProps) {
                 >
                   {order.order_number}
                 </Link>
-              </td>
-              <td className="px-4 py-2.5 text-foreground">{order.customer?.full_name ?? "—"}</td>
-              <td className="px-4 py-2.5">
+              </TableCell>
+              <TableCell className="text-foreground">{order.customer?.full_name ?? "—"}</TableCell>
+              <TableCell>
                 <StatusBadge label={ORDER_STATUS_LABELS[order.status]} tone={STATUS_TONE[order.status]} />
-              </td>
-              <td className="px-4 py-2.5 text-muted-foreground">{order.order_items[0]?.count ?? 0}</td>
-              <td className="px-4 py-2.5 text-muted-foreground">
+              </TableCell>
+              <TableCell className="text-muted-foreground">{order.order_items[0]?.count ?? 0}</TableCell>
+              <TableCell className="text-muted-foreground">
                 {order.order_stones[0]?.count ?? 0} Stone{(order.order_stones[0]?.count ?? 0) === 1 ? "" : "s"}
-              </td>
-              <td className="px-4 py-2.5 text-muted-foreground">{formatDate(order.order_date)}</td>
-              <td className="px-4 py-2.5 text-muted-foreground">
+              </TableCell>
+              <TableCell className="text-muted-foreground">{formatDate(order.order_date)}</TableCell>
+              <TableCell className="text-muted-foreground">
                 {order.due_date ? formatDate(order.due_date) : "—"}
-              </td>
-              <td className="px-4 py-2.5 text-right font-medium text-foreground">
+              </TableCell>
+              <TableCell className="text-right font-medium text-foreground">
                 {formatCurrency(order.total, order.currency)}
-              </td>
-            </tr>
+              </TableCell>
+            </TableRow>
           ))}
-        </tbody>
-      </table>
+        </TableBody>
+      </Table>
     </SectionCard>
   )
 }

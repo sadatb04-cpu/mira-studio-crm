@@ -61,7 +61,7 @@ export function OrdersFilters() {
       <select
         value={status}
         onChange={(event) => updateParams({ status: event.target.value || null })}
-        className="h-8 rounded-lg border border-input bg-background px-2 text-sm text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30"
+        className="h-8 rounded-lg border border-input bg-input backdrop-blur-sm px-2 text-sm text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30"
       >
         <option value="">All statuses</option>
         {ORDER_STATUSES.map((value) => (

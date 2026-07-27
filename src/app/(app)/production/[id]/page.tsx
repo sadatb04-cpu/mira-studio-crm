@@ -46,7 +46,7 @@ export default async function ProductionJobPage({ params, searchParams }: Produc
   return (
     <div className="flex flex-1 flex-col gap-6 p-6">
       {released === "1" && (
-        <p className="rounded-lg bg-emerald-500/10 px-3 py-2 text-sm text-emerald-600 dark:text-emerald-400">
+        <p className="rounded-lg bg-success/10 px-3 py-2 text-sm text-success">
           Order released to production.
         </p>
       )}
