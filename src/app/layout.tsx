@@ -5,6 +5,8 @@ import "./globals.css";
 import { cn } from "@/lib/utils";
 import { ThemeProvider } from "@/lib/theme";
 import { AuroraBackground } from "@/components/layout/aurora-background";
+import { BrandingProvider } from "@/components/providers/branding-provider";
+import { getCachedBranding } from "@/lib/supabase/branding";
 
 const LIGHT_THEMES = ["rose-gold", "arctic"];
 
@@ -34,16 +36,23 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-export const metadata: Metadata = {
-  title: "Mira Operations CRM",
-  description: "Operations CRM for order, production, and inventory management.",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const branding = await getCachedBranding();
 
-export default function RootLayout({
+  return {
+    title: `${branding.applicationName} CRM`,
+    description: "Operations CRM for order, production, and inventory management.",
+    icons: branding.logoUrl ? { icon: branding.logoUrl } : undefined,
+  };
+}
+
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const branding = await getCachedBranding();
+
   return (
     <html
       lang="en"
@@ -56,11 +65,13 @@ export default function RootLayout({
           suppressHydrationWarning
           dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }}
         />
-        <ThemeProvider>
-          <AuroraBackground />
-          {children}
-          <Toaster position="bottom-right" theme="system" />
-        </ThemeProvider>
+        <BrandingProvider branding={branding}>
+          <ThemeProvider>
+            <AuroraBackground />
+            {children}
+            <Toaster position="bottom-right" theme="system" />
+          </ThemeProvider>
+        </BrandingProvider>
       </body>
     </html>
   );

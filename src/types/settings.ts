@@ -6,6 +6,7 @@ export const SETTINGS_KEYS = {
   companyInfo: "company_info",
   userPreferences: "user_preferences",
   businessRules: "business_rules",
+  branding: "branding",
 } as const
 
 export const DATE_FORMAT_OPTIONS = ["MMM d, yyyy", "MM/dd/yyyy", "dd/MM/yyyy", "yyyy-MM-dd"] as const

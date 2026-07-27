@@ -2,6 +2,7 @@
 
 import type { SupabaseClient } from "@supabase/supabase-js"
 import { redirect } from "next/navigation"
+import { cookies } from "next/headers"
 
 import { createClient } from "@/lib/supabase/server"
 import { ensureProfile } from "@/lib/supabase/profile"
@@ -13,6 +14,11 @@ export interface AuthFormState {
   error?: string
   fieldErrors?: Record<string, string[]>
 }
+
+// Purely a UI signal for the post-login splash screen - not part of the
+// session/auth state itself. Short-lived and self-clearing (see
+// clearLoginSplashFlag) so a page refresh never re-shows the splash.
+const SPLASH_COOKIE = "mira-show-splash"
 
 async function logAuthActivity(
   supabase: SupabaseClient,
@@ -82,7 +88,15 @@ export async function login(_prevState: AuthFormState, formData: FormData): Prom
   const permissions = await getUserPermissions(supabase, data.user.id)
   const destination = getFirstAccessibleRoute(permissions, profile.role) ?? "/access-denied"
 
+  const cookieStore = await cookies()
+  cookieStore.set(SPLASH_COOKIE, "1", { maxAge: 30, path: "/" })
+
   redirect(destination)
+}
+
+export async function clearLoginSplashFlag() {
+  const cookieStore = await cookies()
+  cookieStore.delete(SPLASH_COOKIE)
 }
 
 export async function signOut() {

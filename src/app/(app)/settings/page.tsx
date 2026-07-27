@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { ShieldCheck, Users } from "lucide-react"
+import { Palette, ShieldCheck, Users } from "lucide-react"
 import { notFound, redirect } from "next/navigation"
 
 import { PageHeader } from "@/components/shared/page-header"
@@ -44,6 +44,12 @@ export default async function SettingsPage() {
         description="Configure system options, integration endpoints, and parameters."
         actions={
           <div className="flex items-center gap-2">
+            <Button asChild size="sm" variant="outline">
+              <Link href="/settings/branding">
+                <Palette className="size-3.5" data-icon="inline-start" />
+                Branding
+              </Link>
+            </Button>
             <Button asChild size="sm" variant="outline">
               <Link href="/settings/users">
                 <Users className="size-3.5" data-icon="inline-start" />
