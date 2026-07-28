@@ -7,10 +7,8 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { adjustJewelryStock } from "@/app/actions/jewelry"
-
-const selectClassName =
-  "h-8 w-full rounded-lg border border-input bg-input backdrop-blur-sm px-2 text-sm text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30"
 
 interface JewelryAdjustStockDialogProps {
   jewelryItemId: string
@@ -80,15 +78,15 @@ export function JewelryAdjustStockDialog({ jewelryItemId }: JewelryAdjustStockDi
         <div className="flex flex-col gap-4">
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="adjust-direction">Direction</Label>
-            <select
-              id="adjust-direction"
-              value={direction}
-              onChange={(event) => setDirection(event.target.value as "increase" | "decrease")}
-              className={selectClassName}
-            >
-              <option value="increase">Increase (Purchase / Return)</option>
-              <option value="decrease">Decrease (Sale / Adjustment)</option>
-            </select>
+            <Select value={direction} onValueChange={(value) => setDirection(value as "increase" | "decrease")}>
+              <SelectTrigger id="adjust-direction">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="increase">Increase (Purchase / Return)</SelectItem>
+                <SelectItem value="decrease">Decrease (Sale / Adjustment)</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="flex flex-col gap-1.5">

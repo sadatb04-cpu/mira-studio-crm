@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { createClient } from "@/lib/supabase/client"
 import { createLooseDiamond, updateLooseDiamond } from "@/app/actions/loose-diamonds"
 import { createDocument } from "@/app/actions/documents"
@@ -25,9 +26,6 @@ import type { LooseDiamondDetail, LooseDiamondFormInput } from "@/types/loose-di
 import type { SupplierOption } from "@/lib/supabase/inventory-shared"
 
 const DOCUMENTS_BUCKET = "documents"
-
-const selectClassName =
-  "h-8 w-full rounded-lg border border-input bg-input backdrop-blur-sm px-2 text-sm text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30"
 
 const DEFAULT_FORM: LooseDiamondFormInput = {
   reportNumber: "",
@@ -230,14 +228,22 @@ export function LooseDiamondFormDrawer({ suppliers, diamond }: LooseDiamondFormD
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="diamond-shape">Shape</Label>
-                <select id="diamond-shape" value={form.shape} onChange={(event) => update("shape", event.target.value)} className={selectClassName}>
-                  <option value="">Select...</option>
-                  {DIAMOND_SHAPE_SUGGESTIONS.map((value) => (
-                    <option key={value} value={value}>
-                      {value}
-                    </option>
-                  ))}
-                </select>
+                <Select
+                  value={form.shape || "none"}
+                  onValueChange={(value) => update("shape", value === "none" ? "" : value)}
+                >
+                  <SelectTrigger id="diamond-shape">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Select...</SelectItem>
+                    {DIAMOND_SHAPE_SUGGESTIONS.map((value) => (
+                      <SelectItem key={value} value={value}>
+                        {value}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="diamond-carat">
@@ -254,30 +260,41 @@ export function LooseDiamondFormDrawer({ suppliers, diamond }: LooseDiamondFormD
               </div>
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="diamond-color">Color</Label>
-                <select id="diamond-color" value={form.color} onChange={(event) => update("color", event.target.value)} className={selectClassName}>
-                  <option value="">Select...</option>
-                  {DIAMOND_COLOR_SUGGESTIONS.map((value) => (
-                    <option key={value} value={value}>
-                      {value}
-                    </option>
-                  ))}
-                </select>
+                <Select
+                  value={form.color || "none"}
+                  onValueChange={(value) => update("color", value === "none" ? "" : value)}
+                >
+                  <SelectTrigger id="diamond-color">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Select...</SelectItem>
+                    {DIAMOND_COLOR_SUGGESTIONS.map((value) => (
+                      <SelectItem key={value} value={value}>
+                        {value}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="diamond-clarity">Clarity</Label>
-                <select
-                  id="diamond-clarity"
-                  value={form.clarity}
-                  onChange={(event) => update("clarity", event.target.value)}
-                  className={selectClassName}
+                <Select
+                  value={form.clarity || "none"}
+                  onValueChange={(value) => update("clarity", value === "none" ? "" : value)}
                 >
-                  <option value="">Select...</option>
-                  {DIAMOND_CLARITY_SUGGESTIONS.map((value) => (
-                    <option key={value} value={value}>
-                      {value}
-                    </option>
-                  ))}
-                </select>
+                  <SelectTrigger id="diamond-clarity">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Select...</SelectItem>
+                    {DIAMOND_CLARITY_SUGGESTIONS.map((value) => (
+                      <SelectItem key={value} value={value}>
+                        {value}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="diamond-cut">Cut</Label>
@@ -297,19 +314,22 @@ export function LooseDiamondFormDrawer({ suppliers, diamond }: LooseDiamondFormD
               </div>
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="diamond-growth-type">Growth Type</Label>
-                <select
-                  id="diamond-growth-type"
-                  value={form.growthType}
-                  onChange={(event) => update("growthType", event.target.value)}
-                  className={selectClassName}
+                <Select
+                  value={form.growthType || "none"}
+                  onValueChange={(value) => update("growthType", value === "none" ? "" : value)}
                 >
-                  <option value="">Select...</option>
-                  {DIAMOND_GROWTH_TYPE_SUGGESTIONS.map((value) => (
-                    <option key={value} value={value}>
-                      {value}
-                    </option>
-                  ))}
-                </select>
+                  <SelectTrigger id="diamond-growth-type">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Select...</SelectItem>
+                    {DIAMOND_GROWTH_TYPE_SUGGESTIONS.map((value) => (
+                      <SelectItem key={value} value={value}>
+                        {value}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="diamond-origin">Country of Origin</Label>
@@ -346,35 +366,41 @@ export function LooseDiamondFormDrawer({ suppliers, diamond }: LooseDiamondFormD
               {!isEdit && (
                 <div className="flex flex-col gap-1.5">
                   <Label htmlFor="diamond-status">Status</Label>
-                  <select
-                    id="diamond-status"
+                  <Select
                     value={form.status}
-                    onChange={(event) => update("status", event.target.value as LooseDiamondFormInput["status"])}
-                    className={selectClassName}
+                    onValueChange={(value) => update("status", value as LooseDiamondFormInput["status"])}
                   >
-                    {LOOSE_DIAMOND_STATUSES.map((value) => (
-                      <option key={value} value={value}>
-                        {LOOSE_DIAMOND_STATUS_LABELS[value]}
-                      </option>
-                    ))}
-                  </select>
+                    <SelectTrigger id="diamond-status">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {LOOSE_DIAMOND_STATUSES.map((value) => (
+                        <SelectItem key={value} value={value}>
+                          {LOOSE_DIAMOND_STATUS_LABELS[value]}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               )}
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="diamond-supplier">Supplier</Label>
-                <select
-                  id="diamond-supplier"
-                  value={form.supplierId}
-                  onChange={(event) => update("supplierId", event.target.value)}
-                  className={selectClassName}
+                <Select
+                  value={form.supplierId || "none"}
+                  onValueChange={(value) => update("supplierId", value === "none" ? "" : value)}
                 >
-                  <option value="">None</option>
-                  {suppliers.map((supplier) => (
-                    <option key={supplier.id} value={supplier.id}>
-                      {supplier.name}
-                    </option>
-                  ))}
-                </select>
+                  <SelectTrigger id="diamond-supplier">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">None</SelectItem>
+                    {suppliers.map((supplier) => (
+                      <SelectItem key={supplier.id} value={supplier.id}>
+                        {supplier.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
           </div>

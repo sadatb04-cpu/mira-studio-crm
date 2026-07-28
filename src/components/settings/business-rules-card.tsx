@@ -7,15 +7,13 @@ import { SectionCard } from "@/components/shared/section-card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { updateBusinessRules } from "@/app/actions/settings"
 import { PRODUCTION_PRIORITY_LABELS } from "@/types/production"
 import { TASK_PRIORITIES, TASK_PRIORITY_LABELS } from "@/types/task"
 import type { BusinessRules } from "@/types/settings"
 
 const PRODUCTION_PRIORITY_VALUES: BusinessRules["defaultProductionPriority"][] = ["low", "normal", "high", "urgent"]
-
-const selectClassName =
-  "h-8 w-full rounded-lg border border-input bg-input backdrop-blur-sm px-2 text-sm text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30"
 
 interface BusinessRulesCardProps {
   businessRules: BusinessRules
@@ -51,41 +49,47 @@ export function BusinessRulesCard({ businessRules }: BusinessRulesCardProps) {
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="default-task-priority">Default Task Priority</Label>
-            <select
-              id="default-task-priority"
+            <Select
               value={form.defaultTaskPriority}
-              onChange={(event) =>
-                setForm((current) => ({ ...current, defaultTaskPriority: event.target.value as BusinessRules["defaultTaskPriority"] }))
+              onValueChange={(value) =>
+                setForm((current) => ({ ...current, defaultTaskPriority: value as BusinessRules["defaultTaskPriority"] }))
               }
-              className={selectClassName}
             >
-              {TASK_PRIORITIES.map((value) => (
-                <option key={value} value={value}>
-                  {TASK_PRIORITY_LABELS[value]}
-                </option>
-              ))}
-            </select>
+              <SelectTrigger id="default-task-priority">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {TASK_PRIORITIES.map((value) => (
+                  <SelectItem key={value} value={value}>
+                    {TASK_PRIORITY_LABELS[value]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="default-production-priority">Default Production Priority</Label>
-            <select
-              id="default-production-priority"
+            <Select
               value={form.defaultProductionPriority}
-              onChange={(event) =>
+              onValueChange={(value) =>
                 setForm((current) => ({
                   ...current,
-                  defaultProductionPriority: event.target.value as BusinessRules["defaultProductionPriority"],
+                  defaultProductionPriority: value as BusinessRules["defaultProductionPriority"],
                 }))
               }
-              className={selectClassName}
             >
-              {PRODUCTION_PRIORITY_VALUES.map((value) => (
-                <option key={value} value={value}>
-                  {PRODUCTION_PRIORITY_LABELS[value]}
-                </option>
-              ))}
-            </select>
+              <SelectTrigger id="default-production-priority">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {PRODUCTION_PRIORITY_VALUES.map((value) => (
+                  <SelectItem key={value} value={value}>
+                    {PRODUCTION_PRIORITY_LABELS[value]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
 

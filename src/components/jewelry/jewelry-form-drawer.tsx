@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { createClient } from "@/lib/supabase/client"
 import { createJewelryItem, updateJewelryItem } from "@/app/actions/jewelry"
 import { createDocument } from "@/app/actions/documents"
@@ -19,9 +20,6 @@ import type { SupplierOption } from "@/lib/supabase/inventory-shared"
 
 const DOCUMENTS_BUCKET = "documents"
 const IMAGE_MIME_TYPES = ["image/png", "image/jpeg", "image/webp"]
-
-const selectClassName =
-  "h-8 w-full rounded-lg border border-input bg-input backdrop-blur-sm px-2 text-sm text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30"
 
 const DEFAULT_FORM: JewelryFormInput = {
   sku: "",
@@ -210,34 +208,37 @@ export function JewelryFormDrawer({ suppliers, item }: JewelryFormDrawerProps) {
               </div>
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="jewelry-category">Category</Label>
-                <select
-                  id="jewelry-category"
-                  value={form.category ?? ""}
-                  onChange={(event) => update("category", (event.target.value || undefined) as JewelryCategory | undefined)}
-                  className={selectClassName}
+                <Select
+                  value={form.category ?? "none"}
+                  onValueChange={(value) => update("category", (value === "none" ? undefined : value) as JewelryCategory | undefined)}
                 >
-                  <option value="">Select...</option>
-                  {JEWELRY_CATEGORIES.map((value) => (
-                    <option key={value} value={value}>
-                      {value}
-                    </option>
-                  ))}
-                </select>
+                  <SelectTrigger id="jewelry-category">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Select...</SelectItem>
+                    {JEWELRY_CATEGORIES.map((value) => (
+                      <SelectItem key={value} value={value}>
+                        {value}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="jewelry-status">Status</Label>
-                <select
-                  id="jewelry-status"
-                  value={form.status}
-                  onChange={(event) => update("status", event.target.value as JewelryStatus)}
-                  className={selectClassName}
-                >
-                  {JEWELRY_STATUSES.map((value) => (
-                    <option key={value} value={value}>
-                      {JEWELRY_STATUS_LABELS[value]}
-                    </option>
-                  ))}
-                </select>
+                <Select value={form.status} onValueChange={(value) => update("status", value as JewelryStatus)}>
+                  <SelectTrigger id="jewelry-status">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {JEWELRY_STATUSES.map((value) => (
+                      <SelectItem key={value} value={value}>
+                        {JEWELRY_STATUS_LABELS[value]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
           </div>
@@ -339,14 +340,22 @@ export function JewelryFormDrawer({ suppliers, item }: JewelryFormDrawerProps) {
               </div>
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="jewelry-supplier">Supplier</Label>
-                <select id="jewelry-supplier" value={form.supplierId} onChange={(event) => update("supplierId", event.target.value)} className={selectClassName}>
-                  <option value="">None</option>
-                  {suppliers.map((supplier) => (
-                    <option key={supplier.id} value={supplier.id}>
-                      {supplier.name}
-                    </option>
-                  ))}
-                </select>
+                <Select
+                  value={form.supplierId || "none"}
+                  onValueChange={(value) => update("supplierId", value === "none" ? "" : value)}
+                >
+                  <SelectTrigger id="jewelry-supplier">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">None</SelectItem>
+                    {suppliers.map((supplier) => (
+                      <SelectItem key={supplier.id} value={supplier.id}>
+                        {supplier.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
             {!isEdit && (

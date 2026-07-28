@@ -6,12 +6,10 @@ import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { updateLooseDiamondStatusAction } from "@/app/actions/loose-diamonds"
 import { LOOSE_DIAMOND_STATUSES, LOOSE_DIAMOND_STATUS_LABELS } from "@/types/loose-diamond"
 import type { LooseDiamondStatus } from "@/types/loose-diamond"
-
-const selectClassName =
-  "h-8 w-full rounded-lg border border-input bg-input backdrop-blur-sm px-2 text-sm text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30"
 
 interface LooseDiamondStatusDialogProps {
   looseDiamondId: string
@@ -72,18 +70,18 @@ export function LooseDiamondStatusDialog({ looseDiamondId, currentStatus }: Loos
         <div className="flex flex-col gap-4">
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="new-status">New Status</Label>
-            <select
-              id="new-status"
-              value={newStatus}
-              onChange={(event) => setNewStatus(event.target.value as LooseDiamondStatus)}
-              className={selectClassName}
-            >
-              {LOOSE_DIAMOND_STATUSES.map((value) => (
-                <option key={value} value={value}>
-                  {LOOSE_DIAMOND_STATUS_LABELS[value]}
-                </option>
-              ))}
-            </select>
+            <Select value={newStatus} onValueChange={(value) => setNewStatus(value as LooseDiamondStatus)}>
+              <SelectTrigger id="new-status">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {LOOSE_DIAMOND_STATUSES.map((value) => (
+                  <SelectItem key={value} value={value}>
+                    {LOOSE_DIAMOND_STATUS_LABELS[value]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="flex flex-col gap-1.5">

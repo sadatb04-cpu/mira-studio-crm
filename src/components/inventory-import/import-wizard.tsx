@@ -20,6 +20,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { cn } from "@/lib/utils"
 import { parseCsvFile, parseCsvText, parseXlsxFile } from "@/lib/import/parse-table"
@@ -29,9 +30,6 @@ import type { ColumnMapping } from "@/lib/import/column-mapping"
 import { fetchGoogleSheetCsv } from "@/app/actions/inventory"
 import { IMPORT_SOURCE_TYPES, IMPORT_SOURCE_TYPE_LABELS } from "@/types/import"
 import type { DuplicateResolution, ImportDuplicateMatch, ImportRowResult, ImportSourceType, ImportSummary } from "@/types/import"
-
-const selectClassName =
-  "h-8 w-full rounded-lg border border-input bg-input backdrop-blur-sm px-2 text-sm text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30"
 
 const SOURCE_ICONS: Record<ImportSourceType, typeof FileSpreadsheet> = {
   xlsx: FileSpreadsheet,
@@ -432,20 +430,27 @@ export function ImportWizard<TField extends string, TInput extends object>({
                         {config.requiredFields.includes(field) && <span className="text-destructive">*</span>}
                       </td>
                       <td className="px-3 py-2">
-                        <select
-                          value={mapping[field] ?? ""}
-                          onChange={(event) =>
-                            setMapping((current) => ({ ...current, [field]: event.target.value || undefined }))
+                        <Select
+                          value={mapping[field] ?? "__unmapped__"}
+                          onValueChange={(value) =>
+                            setMapping((current) => ({
+                              ...current,
+                              [field]: value === "__unmapped__" ? undefined : value,
+                            }))
                           }
-                          className={selectClassName}
                         >
-                          <option value="">— Not mapped —</option>
-                          {table.headers.map((header) => (
-                            <option key={header} value={header}>
-                              {header}
-                            </option>
-                          ))}
-                        </select>
+                          <SelectTrigger className="h-8 w-full">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="__unmapped__">— Not mapped —</SelectItem>
+                            {table.headers.map((header) => (
+                              <SelectItem key={header} value={header}>
+                                {header}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </td>
                     </tr>
                   ))}
@@ -502,15 +507,21 @@ export function ImportWizard<TField extends string, TInput extends object>({
                             {row.errors[0]}
                           </span>
                         ) : row.duplicateOf ? (
-                          <select
+                          <Select
                             value={row.resolution}
-                            onChange={(event) => updateResolution(row.rowIndex, event.target.value as DuplicateResolution)}
-                            className={selectClassName}
+                            onValueChange={(value) => updateResolution(row.rowIndex, value as DuplicateResolution)}
                           >
-                            <option value="skip">Skip (matches &quot;{row.duplicateOf.label}&quot;)</option>
-                            <option value="update">Update Existing</option>
-                            {config.allowCreateDuplicate && <option value="create_duplicate">Create Duplicate</option>}
-                          </select>
+                            <SelectTrigger className="h-8 w-full">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="skip">Skip (matches &quot;{row.duplicateOf.label}&quot;)</SelectItem>
+                              <SelectItem value="update">Update Existing</SelectItem>
+                              {config.allowCreateDuplicate && (
+                                <SelectItem value="create_duplicate">Create Duplicate</SelectItem>
+                              )}
+                            </SelectContent>
+                          </Select>
                         ) : (
                           <span className="flex items-center gap-1 text-xs text-success">
                             <Check className="size-3.5" />

@@ -8,6 +8,7 @@ import { Plus, RefreshCw, Upload, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import { createClient } from "@/lib/supabase/client"
 import { createInventoryItem, generateSkuAction } from "@/app/actions/inventory"
@@ -19,14 +20,11 @@ import type { InventoryCategory, InventoryItemFormInput, SupplierOption } from "
 const DOCUMENTS_BUCKET = "documents"
 const IMAGE_MIME_TYPES = ["image/png", "image/jpeg", "image/webp"]
 
-const selectClassName =
-  "h-8 w-full rounded-lg border border-input bg-input backdrop-blur-sm px-2 text-sm text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30"
-
 const DEFAULT_FORM: InventoryItemFormInput = {
   name: "",
   sku: "",
   category: "gold",
-  supplierId: "",
+  supplierId: "none",
   unit: "pcs",
   currentStock: 0,
   minimumStock: 0,
@@ -144,7 +142,10 @@ export function InventoryAddDrawer({ suppliers }: InventoryAddDrawerProps) {
     setIsSaving(true)
 
     void (async () => {
-      const result = await createInventoryItem(form)
+      const result = await createInventoryItem({
+        ...form,
+        supplierId: form.supplierId === "none" ? "" : form.supplierId,
+      })
 
       if (result.error || !result.id) {
         setIsSaving(false)
@@ -235,35 +236,35 @@ export function InventoryAddDrawer({ suppliers }: InventoryAddDrawerProps) {
 
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="item-category">Category</Label>
-                <select
-                  id="item-category"
-                  value={form.category}
-                  onChange={(event) => update("category", event.target.value as InventoryCategory)}
-                  className={selectClassName}
-                >
-                  {INVENTORY_CATEGORIES.map((value) => (
-                    <option key={value} value={value}>
-                      {INVENTORY_CATEGORY_LABELS[value]}
-                    </option>
-                  ))}
-                </select>
+                <Select value={form.category} onValueChange={(value) => update("category", value as InventoryCategory)}>
+                  <SelectTrigger id="item-category">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {INVENTORY_CATEGORIES.map((value) => (
+                      <SelectItem key={value} value={value}>
+                        {INVENTORY_CATEGORY_LABELS[value]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="item-supplier">Supplier</Label>
-                <select
-                  id="item-supplier"
-                  value={form.supplierId}
-                  onChange={(event) => update("supplierId", event.target.value)}
-                  className={selectClassName}
-                >
-                  <option value="">None</option>
-                  {suppliers.map((supplier) => (
-                    <option key={supplier.id} value={supplier.id}>
-                      {supplier.name}
-                    </option>
-                  ))}
-                </select>
+                <Select value={form.supplierId} onValueChange={(value) => update("supplierId", value)}>
+                  <SelectTrigger id="item-supplier">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">None</SelectItem>
+                    {suppliers.map((supplier) => (
+                      <SelectItem key={supplier.id} value={supplier.id}>
+                        {supplier.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="flex flex-col gap-1.5">

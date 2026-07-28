@@ -5,6 +5,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation"
 
 import { FilterBar } from "@/components/shared/filter-bar"
 import { SearchInput } from "@/components/shared/search-input"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { JEWELRY_CATEGORIES, JEWELRY_STATUSES, JEWELRY_STATUS_LABELS } from "@/types/jewelry"
 
 const STOCK_LEVEL_OPTIONS = ["in_stock", "low_stock", "out_of_stock"] as const
@@ -14,24 +15,21 @@ const STOCK_LEVEL_LABELS: Record<(typeof STOCK_LEVEL_OPTIONS)[number], string> =
   out_of_stock: "Out of Stock",
 }
 
-const selectClassName =
-  "h-8 rounded-lg border border-input bg-input backdrop-blur-sm px-2 text-sm text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30"
-
 export function JewelryFilters() {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
 
   const [search, setSearch] = useState(searchParams.get("q") ?? "")
-  const category = searchParams.get("category") ?? ""
-  const status = searchParams.get("status") ?? ""
-  const stockLevel = searchParams.get("stockLevel") ?? ""
+  const category = searchParams.get("category") ?? "all"
+  const status = searchParams.get("status") ?? "all"
+  const stockLevel = searchParams.get("stockLevel") ?? "all"
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   function updateParams(updates: Record<string, string | null>) {
     const params = new URLSearchParams(searchParams.toString())
     for (const [key, value] of Object.entries(updates)) {
-      if (value) {
+      if (value && value !== "all") {
         params.set(key, value)
       } else {
         params.delete(key)
@@ -54,7 +52,7 @@ export function JewelryFilters() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search])
 
-  const hasActiveFilters = Boolean(search || category || status || stockLevel)
+  const hasActiveFilters = Boolean(search || category !== "all" || status !== "all" || stockLevel !== "all")
 
   return (
     <FilterBar
@@ -66,32 +64,47 @@ export function JewelryFilters() {
     >
       <SearchInput value={search} onChange={setSearch} placeholder="Search by SKU or product name..." className="max-w-xs" />
 
-      <select value={category} onChange={(event) => updateParams({ category: event.target.value || null })} className={selectClassName}>
-        <option value="">All categories</option>
-        {JEWELRY_CATEGORIES.map((value) => (
-          <option key={value} value={value}>
-            {value}
-          </option>
-        ))}
-      </select>
+      <Select value={category} onValueChange={(value) => updateParams({ category: value })}>
+        <SelectTrigger className="w-40">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">All categories</SelectItem>
+          {JEWELRY_CATEGORIES.map((value) => (
+            <SelectItem key={value} value={value}>
+              {value}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
 
-      <select value={status} onChange={(event) => updateParams({ status: event.target.value || null })} className={selectClassName}>
-        <option value="">All statuses</option>
-        {JEWELRY_STATUSES.map((value) => (
-          <option key={value} value={value}>
-            {JEWELRY_STATUS_LABELS[value]}
-          </option>
-        ))}
-      </select>
+      <Select value={status} onValueChange={(value) => updateParams({ status: value })}>
+        <SelectTrigger className="w-36">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">All statuses</SelectItem>
+          {JEWELRY_STATUSES.map((value) => (
+            <SelectItem key={value} value={value}>
+              {JEWELRY_STATUS_LABELS[value]}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
 
-      <select value={stockLevel} onChange={(event) => updateParams({ stockLevel: event.target.value || null })} className={selectClassName}>
-        <option value="">All stock levels</option>
-        {STOCK_LEVEL_OPTIONS.map((value) => (
-          <option key={value} value={value}>
-            {STOCK_LEVEL_LABELS[value]}
-          </option>
-        ))}
-      </select>
+      <Select value={stockLevel} onValueChange={(value) => updateParams({ stockLevel: value })}>
+        <SelectTrigger className="w-40">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">All stock levels</SelectItem>
+          {STOCK_LEVEL_OPTIONS.map((value) => (
+            <SelectItem key={value} value={value}>
+              {STOCK_LEVEL_LABELS[value]}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
     </FilterBar>
   )
 }

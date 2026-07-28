@@ -15,11 +15,9 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { adjustInventory, consumeInventory } from "@/app/actions/inventory"
 import type { InventoryItemOption } from "@/types/inventory"
-
-const selectClassName =
-  "h-8 w-full rounded-lg border border-input bg-input backdrop-blur-sm px-2 text-sm text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30"
 
 interface InventoryAdjustmentDialogProps {
   mode: "adjust" | "consume"
@@ -110,34 +108,33 @@ export function InventoryAdjustmentDialog({
           {mode === "consume" && (
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="inventory-item">Inventory Item</Label>
-              <select
-                id="inventory-item"
-                value={selectedItemId}
-                onChange={(event) => setSelectedItemId(event.target.value)}
-                className={selectClassName}
-              >
-                <option value="">Select an item...</option>
-                {items.map((option) => (
-                  <option key={option.id} value={option.id}>
-                    {option.name} ({option.sku})
-                  </option>
-                ))}
-              </select>
+              <Select value={selectedItemId || undefined} onValueChange={setSelectedItemId}>
+                <SelectTrigger id="inventory-item">
+                  <SelectValue placeholder="Select an item..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {items.map((option) => (
+                    <SelectItem key={option.id} value={option.id}>
+                      {option.name} ({option.sku})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           )}
 
           {mode === "adjust" && (
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="direction">Direction</Label>
-              <select
-                id="direction"
-                value={direction}
-                onChange={(event) => setDirection(event.target.value as "increase" | "decrease")}
-                className={selectClassName}
-              >
-                <option value="increase">Increase Stock</option>
-                <option value="decrease">Decrease Stock</option>
-              </select>
+              <Select value={direction} onValueChange={(value) => setDirection(value as "increase" | "decrease")}>
+                <SelectTrigger id="direction">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="increase">Increase Stock</SelectItem>
+                  <SelectItem value="decrease">Decrease Stock</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           )}
 

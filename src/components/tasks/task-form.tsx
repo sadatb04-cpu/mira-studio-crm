@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { SectionCard } from "@/components/shared/section-card"
 import { createTask, updateTask } from "@/app/actions/tasks"
 import { TASK_PRIORITIES, TASK_PRIORITY_LABELS, TASK_STATUSES, TASK_STATUS_LABELS } from "@/types/task"
@@ -13,9 +14,6 @@ import type { OrderOption, ProductionJobOption, TaskDetail, TaskPriority, TaskSt
 import type { EmployeeOption } from "@/types/production"
 
 const STEPS = ["Task Information", "Assignment", "Related Records", "Review"] as const
-
-const selectClassName =
-  "h-8 w-full rounded-lg border border-input bg-input backdrop-blur-sm px-2 text-sm text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30"
 
 type TaskFormProps = {
   employees: EmployeeOption[]
@@ -32,9 +30,9 @@ export function TaskForm({ mode, task, employees, orders, productionJobs, defaul
   const [priority, setPriority] = useState<TaskPriority>(task?.priority ?? defaultPriority ?? "medium")
   const [status, setStatus] = useState<TaskStatus>(task?.status ?? "todo")
   const [dueDate, setDueDate] = useState(task?.due_date ?? "")
-  const [assignedTo, setAssignedTo] = useState(task?.assigned_employee?.id ?? "")
-  const [orderId, setOrderId] = useState(task?.order?.id ?? "")
-  const [productionJobId, setProductionJobId] = useState(task?.production_job?.id ?? "")
+  const [assignedTo, setAssignedTo] = useState(task?.assigned_employee?.id ?? "unassigned")
+  const [orderId, setOrderId] = useState(task?.order?.id ?? "none")
+  const [productionJobId, setProductionJobId] = useState(task?.production_job?.id ?? "none")
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
 
@@ -53,9 +51,9 @@ export function TaskForm({ mode, task, employees, orders, productionJobs, defaul
       priority,
       status,
       due_date: dueDate,
-      assigned_to: assignedTo || undefined,
-      order_id: orderId || undefined,
-      production_job_id: productionJobId || undefined,
+      assigned_to: assignedTo !== "unassigned" ? assignedTo : undefined,
+      order_id: orderId !== "none" ? orderId : undefined,
+      production_job_id: productionJobId !== "none" ? productionJobId : undefined,
     }
 
     startTransition(async () => {
@@ -119,36 +117,36 @@ export function TaskForm({ mode, task, employees, orders, productionJobs, defaul
                 <Label htmlFor="priority">
                   Priority<span className="text-destructive">*</span>
                 </Label>
-                <select
-                  id="priority"
-                  value={priority}
-                  onChange={(event) => setPriority(event.target.value as TaskPriority)}
-                  className={selectClassName}
-                >
-                  {TASK_PRIORITIES.map((value) => (
-                    <option key={value} value={value}>
-                      {TASK_PRIORITY_LABELS[value]}
-                    </option>
-                  ))}
-                </select>
+                <Select value={priority} onValueChange={(value) => setPriority(value as TaskPriority)}>
+                  <SelectTrigger id="priority">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {TASK_PRIORITIES.map((value) => (
+                      <SelectItem key={value} value={value}>
+                        {TASK_PRIORITY_LABELS[value]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="status">
                   Status<span className="text-destructive">*</span>
                 </Label>
-                <select
-                  id="status"
-                  value={status}
-                  onChange={(event) => setStatus(event.target.value as TaskStatus)}
-                  className={selectClassName}
-                >
-                  {TASK_STATUSES.map((value) => (
-                    <option key={value} value={value}>
-                      {TASK_STATUS_LABELS[value]}
-                    </option>
-                  ))}
-                </select>
+                <Select value={status} onValueChange={(value) => setStatus(value as TaskStatus)}>
+                  <SelectTrigger id="status">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {TASK_STATUSES.map((value) => (
+                      <SelectItem key={value} value={value}>
+                        {TASK_STATUS_LABELS[value]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 
@@ -171,19 +169,19 @@ export function TaskForm({ mode, task, employees, orders, productionJobs, defaul
         <SectionCard title="Assignment" description="Who is responsible for this task (optional).">
           <div className="flex flex-col gap-1.5 sm:max-w-sm">
             <Label htmlFor="assigned-to">Assigned Employee</Label>
-            <select
-              id="assigned-to"
-              value={assignedTo}
-              onChange={(event) => setAssignedTo(event.target.value)}
-              className={selectClassName}
-            >
-              <option value="">Unassigned</option>
-              {employees.map((employee) => (
-                <option key={employee.id} value={employee.id}>
-                  {employee.full_name}
-                </option>
-              ))}
-            </select>
+            <Select value={assignedTo} onValueChange={setAssignedTo}>
+              <SelectTrigger id="assigned-to">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="unassigned">Unassigned</SelectItem>
+                {employees.map((employee) => (
+                  <SelectItem key={employee.id} value={employee.id}>
+                    {employee.full_name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </SectionCard>
       )}
@@ -193,36 +191,36 @@ export function TaskForm({ mode, task, employees, orders, productionJobs, defaul
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:max-w-lg">
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="order">Related Order</Label>
-              <select
-                id="order"
-                value={orderId}
-                onChange={(event) => setOrderId(event.target.value)}
-                className={selectClassName}
-              >
-                <option value="">None</option>
-                {orders.map((order) => (
-                  <option key={order.id} value={order.id}>
-                    {order.order_number}
-                  </option>
-                ))}
-              </select>
+              <Select value={orderId} onValueChange={setOrderId}>
+                <SelectTrigger id="order">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">None</SelectItem>
+                  {orders.map((order) => (
+                    <SelectItem key={order.id} value={order.id}>
+                      {order.order_number}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="production-job">Related Production Job</Label>
-              <select
-                id="production-job"
-                value={productionJobId}
-                onChange={(event) => setProductionJobId(event.target.value)}
-                className={selectClassName}
-              >
-                <option value="">None</option>
-                {productionJobs.map((job) => (
-                  <option key={job.id} value={job.id}>
-                    {job.job_number}
-                  </option>
-                ))}
-              </select>
+              <Select value={productionJobId} onValueChange={setProductionJobId}>
+                <SelectTrigger id="production-job">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">None</SelectItem>
+                  {productionJobs.map((job) => (
+                    <SelectItem key={job.id} value={job.id}>
+                      {job.job_number}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
         </SectionCard>

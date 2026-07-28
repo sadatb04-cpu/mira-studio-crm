@@ -6,15 +6,13 @@ import { Copy, Pencil, Trash2 } from "lucide-react"
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ConfirmDialog } from "@/components/shared/confirm-dialog"
 import { QuotationDialog } from "@/components/orders/quotation-dialog"
 import { QuotationStatusBadge } from "@/components/orders/quotation-status-badge"
 import { deleteQuotation, duplicateQuotation, updateQuotationStatus } from "@/app/actions/quotations"
 import { QUOTATION_COST_FIELDS, QUOTATION_STATUSES, QUOTATION_STATUS_LABELS } from "@/types/quotation"
 import type { Quotation, QuotationStatus } from "@/types/quotation"
-
-const selectClassName =
-  "h-8 rounded-lg border border-input bg-input backdrop-blur-sm px-2 text-sm text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30"
 
 function formatCurrency(amount: number) {
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(amount)
@@ -107,17 +105,18 @@ export function QuotationCard({ orderId, quotation }: QuotationCardProps) {
         {quotation.notes && <p className="text-sm text-muted-foreground">{quotation.notes}</p>}
 
         <div className="flex flex-wrap items-center gap-2 border-t border-border pt-3">
-          <select
-            value={status}
-            onChange={(event) => setStatus(event.target.value as QuotationStatus)}
-            className={selectClassName}
-          >
-            {QUOTATION_STATUSES.map((value) => (
-              <option key={value} value={value}>
-                {QUOTATION_STATUS_LABELS[value]}
-              </option>
-            ))}
-          </select>
+          <Select value={status} onValueChange={(value) => setStatus(value as QuotationStatus)}>
+            <SelectTrigger className="w-40">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {QUOTATION_STATUSES.map((value) => (
+                <SelectItem key={value} value={value}>
+                  {QUOTATION_STATUS_LABELS[value]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <Button type="button" size="sm" variant="outline" onClick={handleStatusUpdate} disabled={isStatusPending || status === quotation.status}>
             {isStatusPending ? "Updating..." : "Update Status"}
           </Button>

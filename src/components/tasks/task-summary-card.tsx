@@ -7,12 +7,10 @@ import { format } from "date-fns"
 
 import { SectionCard } from "@/components/shared/section-card"
 import { Button } from "@/components/ui/button"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { updateTaskStatus } from "@/app/actions/tasks"
 import { TASK_PRIORITY_LABELS, TASK_STATUSES, TASK_STATUS_LABELS } from "@/types/task"
 import type { TaskDetail, TaskStatus } from "@/types/task"
-
-const selectClassName =
-  "h-8 rounded-lg border border-input bg-input backdrop-blur-sm px-2 text-sm text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30"
 
 function formatDate(value: string | null) {
   return value ? format(new Date(value), "MMM d, yyyy") : "Not set"
@@ -86,17 +84,18 @@ export function TaskSummaryCard({ task }: TaskSummaryCardProps) {
         <div className="flex flex-col gap-2 border-t border-border pt-4">
           <span className="text-xs font-medium text-muted-foreground">Update Status</span>
           <div className="flex items-center gap-2">
-            <select
-              value={status}
-              onChange={(event) => setStatus(event.target.value as TaskStatus)}
-              className={selectClassName}
-            >
-              {TASK_STATUSES.map((value) => (
-                <option key={value} value={value}>
-                  {TASK_STATUS_LABELS[value]}
-                </option>
-              ))}
-            </select>
+            <Select value={status} onValueChange={(value) => setStatus(value as TaskStatus)}>
+              <SelectTrigger className="w-40">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {TASK_STATUSES.map((value) => (
+                  <SelectItem key={value} value={value}>
+                    {TASK_STATUS_LABELS[value]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <Button type="button" size="sm" onClick={handleUpdateStatus} disabled={isPending || status === task.status}>
               {isPending ? "Saving..." : "Update Status"}
             </Button>

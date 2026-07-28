@@ -5,11 +5,9 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation"
 
 import { FilterBar } from "@/components/shared/filter-bar"
 import { SearchInput } from "@/components/shared/search-input"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { DEPARTMENTS, DEPARTMENT_LABELS, USER_ROLES, USER_ROLE_LABELS } from "@/types/profile"
 import { EMPLOYMENT_STATUSES, EMPLOYMENT_STATUS_LABELS } from "@/types/employee"
-
-const selectClassName =
-  "h-8 rounded-lg border border-input bg-input backdrop-blur-sm px-2 text-sm text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30"
 
 export function EmployeeFilters() {
   const router = useRouter()
@@ -17,15 +15,15 @@ export function EmployeeFilters() {
   const searchParams = useSearchParams()
 
   const [search, setSearch] = useState(searchParams.get("q") ?? "")
-  const employmentStatus = searchParams.get("employmentStatus") ?? ""
-  const department = searchParams.get("department") ?? ""
-  const role = searchParams.get("role") ?? ""
+  const employmentStatus = searchParams.get("employmentStatus") ?? "all"
+  const department = searchParams.get("department") ?? "all"
+  const role = searchParams.get("role") ?? "all"
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   function updateParams(updates: Record<string, string | null>) {
     const params = new URLSearchParams(searchParams.toString())
     for (const [key, value] of Object.entries(updates)) {
-      if (value) {
+      if (value && value !== "all") {
         params.set(key, value)
       } else {
         params.delete(key)
@@ -48,7 +46,7 @@ export function EmployeeFilters() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search])
 
-  const hasActiveFilters = Boolean(search || employmentStatus || department || role)
+  const hasActiveFilters = Boolean(search || employmentStatus !== "all" || department !== "all" || role !== "all")
 
   return (
     <FilterBar
@@ -65,44 +63,47 @@ export function EmployeeFilters() {
         className="max-w-xs"
       />
 
-      <select
-        value={employmentStatus}
-        onChange={(event) => updateParams({ employmentStatus: event.target.value || null })}
-        className={selectClassName}
-      >
-        <option value="">All statuses</option>
-        {EMPLOYMENT_STATUSES.map((value) => (
-          <option key={value} value={value}>
-            {EMPLOYMENT_STATUS_LABELS[value]}
-          </option>
-        ))}
-      </select>
+      <Select value={employmentStatus} onValueChange={(value) => updateParams({ employmentStatus: value })}>
+        <SelectTrigger className="w-40">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">All statuses</SelectItem>
+          {EMPLOYMENT_STATUSES.map((value) => (
+            <SelectItem key={value} value={value}>
+              {EMPLOYMENT_STATUS_LABELS[value]}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
 
-      <select
-        value={department}
-        onChange={(event) => updateParams({ department: event.target.value || null })}
-        className={selectClassName}
-      >
-        <option value="">All departments</option>
-        {DEPARTMENTS.map((value) => (
-          <option key={value} value={value}>
-            {DEPARTMENT_LABELS[value]}
-          </option>
-        ))}
-      </select>
+      <Select value={department} onValueChange={(value) => updateParams({ department: value })}>
+        <SelectTrigger className="w-40">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">All departments</SelectItem>
+          {DEPARTMENTS.map((value) => (
+            <SelectItem key={value} value={value}>
+              {DEPARTMENT_LABELS[value]}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
 
-      <select
-        value={role}
-        onChange={(event) => updateParams({ role: event.target.value || null })}
-        className={selectClassName}
-      >
-        <option value="">All roles</option>
-        {USER_ROLES.map((value) => (
-          <option key={value} value={value}>
-            {USER_ROLE_LABELS[value]}
-          </option>
-        ))}
-      </select>
+      <Select value={role} onValueChange={(value) => updateParams({ role: value })}>
+        <SelectTrigger className="w-40">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">All roles</SelectItem>
+          {USER_ROLES.map((value) => (
+            <SelectItem key={value} value={value}>
+              {USER_ROLE_LABELS[value]}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
     </FilterBar>
   )
 }

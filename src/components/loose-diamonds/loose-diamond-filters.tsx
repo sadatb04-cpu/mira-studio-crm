@@ -6,6 +6,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { FilterBar } from "@/components/shared/filter-bar"
 import { SearchInput } from "@/components/shared/search-input"
 import { Input } from "@/components/ui/input"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import {
   DIAMOND_COLOR_SUGGESTIONS,
   DIAMOND_CLARITY_SUGGESTIONS,
@@ -15,20 +16,17 @@ import {
   LOOSE_DIAMOND_STATUS_LABELS,
 } from "@/types/loose-diamond"
 
-const selectClassName =
-  "h-8 rounded-lg border border-input bg-input backdrop-blur-sm px-2 text-sm text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30"
-
 export function LooseDiamondFilters() {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
 
   const [search, setSearch] = useState(searchParams.get("q") ?? "")
-  const shape = searchParams.get("shape") ?? ""
-  const color = searchParams.get("color") ?? ""
-  const clarity = searchParams.get("clarity") ?? ""
-  const growthType = searchParams.get("growthType") ?? ""
-  const status = searchParams.get("status") ?? ""
+  const shape = searchParams.get("shape") ?? "all"
+  const color = searchParams.get("color") ?? "all"
+  const clarity = searchParams.get("clarity") ?? "all"
+  const growthType = searchParams.get("growthType") ?? "all"
+  const status = searchParams.get("status") ?? "all"
   const minCarat = searchParams.get("minCarat") ?? ""
   const maxCarat = searchParams.get("maxCarat") ?? ""
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -36,7 +34,7 @@ export function LooseDiamondFilters() {
   function updateParams(updates: Record<string, string | null>) {
     const params = new URLSearchParams(searchParams.toString())
     for (const [key, value] of Object.entries(updates)) {
-      if (value) {
+      if (value && value !== "all") {
         params.set(key, value)
       } else {
         params.delete(key)
@@ -59,7 +57,16 @@ export function LooseDiamondFilters() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search])
 
-  const hasActiveFilters = Boolean(search || shape || color || clarity || growthType || status || minCarat || maxCarat)
+  const hasActiveFilters = Boolean(
+    search ||
+      shape !== "all" ||
+      color !== "all" ||
+      clarity !== "all" ||
+      growthType !== "all" ||
+      status !== "all" ||
+      minCarat ||
+      maxCarat
+  )
 
   return (
     <FilterBar
@@ -71,54 +78,75 @@ export function LooseDiamondFilters() {
     >
       <SearchInput value={search} onChange={setSearch} placeholder="Search by Report #, shape, color, clarity..." className="max-w-xs" />
 
-      <select value={shape} onChange={(event) => updateParams({ shape: event.target.value || null })} className={selectClassName}>
-        <option value="">All shapes</option>
-        {DIAMOND_SHAPE_SUGGESTIONS.map((value) => (
-          <option key={value} value={value}>
-            {value}
-          </option>
-        ))}
-      </select>
+      <Select value={shape} onValueChange={(value) => updateParams({ shape: value })}>
+        <SelectTrigger className="w-32">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">All shapes</SelectItem>
+          {DIAMOND_SHAPE_SUGGESTIONS.map((value) => (
+            <SelectItem key={value} value={value}>
+              {value}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
 
-      <select value={color} onChange={(event) => updateParams({ color: event.target.value || null })} className={selectClassName}>
-        <option value="">All colors</option>
-        {DIAMOND_COLOR_SUGGESTIONS.map((value) => (
-          <option key={value} value={value}>
-            {value}
-          </option>
-        ))}
-      </select>
+      <Select value={color} onValueChange={(value) => updateParams({ color: value })}>
+        <SelectTrigger className="w-32">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">All colors</SelectItem>
+          {DIAMOND_COLOR_SUGGESTIONS.map((value) => (
+            <SelectItem key={value} value={value}>
+              {value}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
 
-      <select value={clarity} onChange={(event) => updateParams({ clarity: event.target.value || null })} className={selectClassName}>
-        <option value="">All clarities</option>
-        {DIAMOND_CLARITY_SUGGESTIONS.map((value) => (
-          <option key={value} value={value}>
-            {value}
-          </option>
-        ))}
-      </select>
+      <Select value={clarity} onValueChange={(value) => updateParams({ clarity: value })}>
+        <SelectTrigger className="w-32">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">All clarities</SelectItem>
+          {DIAMOND_CLARITY_SUGGESTIONS.map((value) => (
+            <SelectItem key={value} value={value}>
+              {value}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
 
-      <select
-        value={growthType}
-        onChange={(event) => updateParams({ growthType: event.target.value || null })}
-        className={selectClassName}
-      >
-        <option value="">All growth types</option>
-        {DIAMOND_GROWTH_TYPE_SUGGESTIONS.map((value) => (
-          <option key={value} value={value}>
-            {value}
-          </option>
-        ))}
-      </select>
+      <Select value={growthType} onValueChange={(value) => updateParams({ growthType: value })}>
+        <SelectTrigger className="w-36">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">All growth types</SelectItem>
+          {DIAMOND_GROWTH_TYPE_SUGGESTIONS.map((value) => (
+            <SelectItem key={value} value={value}>
+              {value}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
 
-      <select value={status} onChange={(event) => updateParams({ status: event.target.value || null })} className={selectClassName}>
-        <option value="">All statuses</option>
-        {LOOSE_DIAMOND_STATUSES.map((value) => (
-          <option key={value} value={value}>
-            {LOOSE_DIAMOND_STATUS_LABELS[value]}
-          </option>
-        ))}
-      </select>
+      <Select value={status} onValueChange={(value) => updateParams({ status: value })}>
+        <SelectTrigger className="w-36">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">All statuses</SelectItem>
+          {LOOSE_DIAMOND_STATUSES.map((value) => (
+            <SelectItem key={value} value={value}>
+              {LOOSE_DIAMOND_STATUS_LABELS[value]}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
 
       <div className="flex items-center gap-1.5">
         <Input

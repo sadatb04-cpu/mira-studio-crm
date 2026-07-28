@@ -7,12 +7,10 @@ import { SectionCard } from "@/components/shared/section-card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { updateCompanyInfo } from "@/app/actions/settings"
 import { TIMEZONE_OPTIONS } from "@/types/settings"
 import type { CompanyInfo } from "@/types/settings"
-
-const selectClassName =
-  "h-8 w-full rounded-lg border border-input bg-input backdrop-blur-sm px-2 text-sm text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30"
 
 interface CompanySettingsCardProps {
   companyInfo: CompanyInfo
@@ -125,18 +123,18 @@ export function CompanySettingsCard({ companyInfo }: CompanySettingsCardProps) {
             <Label htmlFor="company-timezone">
               Time Zone<span className="text-destructive">*</span>
             </Label>
-            <select
-              id="company-timezone"
-              value={form.timezone}
-              onChange={(event) => update("timezone", event.target.value as CompanyInfo["timezone"])}
-              className={selectClassName}
-            >
-              {TIMEZONE_OPTIONS.map((value) => (
-                <option key={value} value={value}>
-                  {value}
-                </option>
-              ))}
-            </select>
+            <Select value={form.timezone} onValueChange={(value) => update("timezone", value as CompanyInfo["timezone"])}>
+              <SelectTrigger id="company-timezone">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {TIMEZONE_OPTIONS.map((value) => (
+                  <SelectItem key={value} value={value}>
+                    {value}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
 

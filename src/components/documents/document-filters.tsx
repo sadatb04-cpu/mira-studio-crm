@@ -5,11 +5,10 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation"
 
 import { FilterBar } from "@/components/shared/filter-bar"
 import { SearchInput } from "@/components/shared/search-input"
+import { Input } from "@/components/ui/input"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { DOCUMENT_TYPES, DOCUMENT_TYPE_LABELS, RELATED_RECORD_TYPES, RELATED_RECORD_TYPE_LABELS } from "@/types/document"
 import type { EmployeeOption } from "@/types/production"
-
-const selectClassName =
-  "h-8 rounded-lg border border-input bg-input backdrop-blur-sm px-2 text-sm text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30"
 
 interface DocumentFiltersProps {
   employees: EmployeeOption[]
@@ -21,16 +20,16 @@ export function DocumentFilters({ employees }: DocumentFiltersProps) {
   const searchParams = useSearchParams()
 
   const [search, setSearch] = useState(searchParams.get("q") ?? "")
-  const documentType = searchParams.get("documentType") ?? ""
-  const uploadedBy = searchParams.get("uploadedBy") ?? ""
-  const relatedType = searchParams.get("relatedType") ?? ""
+  const documentType = searchParams.get("documentType") ?? "all"
+  const uploadedBy = searchParams.get("uploadedBy") ?? "all"
+  const relatedType = searchParams.get("relatedType") ?? "all"
   const uploadedAfter = searchParams.get("uploadedAfter") ?? ""
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   function updateParams(updates: Record<string, string | null>) {
     const params = new URLSearchParams(searchParams.toString())
     for (const [key, value] of Object.entries(updates)) {
-      if (value) {
+      if (value && value !== "all") {
         params.set(key, value)
       } else {
         params.delete(key)
@@ -53,7 +52,9 @@ export function DocumentFilters({ employees }: DocumentFiltersProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search])
 
-  const hasActiveFilters = Boolean(search || documentType || uploadedBy || relatedType || uploadedAfter)
+  const hasActiveFilters = Boolean(
+    search || documentType !== "all" || uploadedBy !== "all" || relatedType !== "all" || uploadedAfter
+  )
 
   return (
     <FilterBar
@@ -65,50 +66,53 @@ export function DocumentFilters({ employees }: DocumentFiltersProps) {
     >
       <SearchInput value={search} onChange={setSearch} placeholder="Search documents..." className="max-w-xs" />
 
-      <select
-        value={documentType}
-        onChange={(event) => updateParams({ documentType: event.target.value || null })}
-        className={selectClassName}
-      >
-        <option value="">All document types</option>
-        {DOCUMENT_TYPES.map((value) => (
-          <option key={value} value={value}>
-            {DOCUMENT_TYPE_LABELS[value]}
-          </option>
-        ))}
-      </select>
+      <Select value={documentType} onValueChange={(value) => updateParams({ documentType: value })}>
+        <SelectTrigger className="w-44">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">All document types</SelectItem>
+          {DOCUMENT_TYPES.map((value) => (
+            <SelectItem key={value} value={value}>
+              {DOCUMENT_TYPE_LABELS[value]}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
 
-      <select
-        value={relatedType}
-        onChange={(event) => updateParams({ relatedType: event.target.value || null })}
-        className={selectClassName}
-      >
-        <option value="">All related entities</option>
-        {RELATED_RECORD_TYPES.map((value) => (
-          <option key={value} value={value}>
-            {RELATED_RECORD_TYPE_LABELS[value]}
-          </option>
-        ))}
-      </select>
+      <Select value={relatedType} onValueChange={(value) => updateParams({ relatedType: value })}>
+        <SelectTrigger className="w-44">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">All related entities</SelectItem>
+          {RELATED_RECORD_TYPES.map((value) => (
+            <SelectItem key={value} value={value}>
+              {RELATED_RECORD_TYPE_LABELS[value]}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
 
-      <select
-        value={uploadedBy}
-        onChange={(event) => updateParams({ uploadedBy: event.target.value || null })}
-        className={selectClassName}
-      >
-        <option value="">All uploaders</option>
-        {employees.map((employee) => (
-          <option key={employee.id} value={employee.id}>
-            {employee.full_name}
-          </option>
-        ))}
-      </select>
+      <Select value={uploadedBy} onValueChange={(value) => updateParams({ uploadedBy: value })}>
+        <SelectTrigger className="w-40">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">All uploaders</SelectItem>
+          {employees.map((employee) => (
+            <SelectItem key={employee.id} value={employee.id}>
+              {employee.full_name}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
 
-      <input
+      <Input
         type="date"
         value={uploadedAfter}
         onChange={(event) => updateParams({ uploadedAfter: event.target.value || null })}
-        className={selectClassName}
+        className="w-auto"
         aria-label="Uploaded after"
       />
     </FilterBar>

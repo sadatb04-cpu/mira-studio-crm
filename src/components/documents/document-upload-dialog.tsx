@@ -7,6 +7,7 @@ import { Loader2, Plus, Upload } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import {
   Dialog,
   DialogContent,
@@ -27,9 +28,6 @@ import {
   RELATED_RECORD_TYPE_LABELS,
 } from "@/types/document"
 import type { DocumentType, FolderOption, RelatedRecordOption, RelatedRecordType } from "@/types/document"
-
-const selectClassName =
-  "h-8 w-full rounded-lg border border-input bg-input backdrop-blur-sm px-2 text-sm text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30"
 
 const BUCKET = "documents"
 
@@ -53,9 +51,9 @@ export function DocumentUploadDialog({
   const [file, setFile] = useState<File | null>(null)
   const [documentType, setDocumentType] = useState<DocumentType>("other")
   const [description, setDescription] = useState("")
-  const [relatedRecordType, setRelatedRecordType] = useState<RelatedRecordType | "">("")
+  const [relatedRecordType, setRelatedRecordType] = useState<RelatedRecordType | "none">("none")
   const [relatedRecordId, setRelatedRecordId] = useState("")
-  const [folderId, setFolderId] = useState(defaultFolderId ?? "")
+  const [folderId, setFolderId] = useState(defaultFolderId ?? "none")
   const [error, setError] = useState<string | null>(null)
   const [isUploading, setIsUploading] = useState(false)
   const [isPending, startTransition] = useTransition()
@@ -67,9 +65,9 @@ export function DocumentUploadDialog({
     setFile(null)
     setDocumentType("other")
     setDescription("")
-    setRelatedRecordType("")
+    setRelatedRecordType("none")
     setRelatedRecordId("")
-    setFolderId(defaultFolderId ?? "")
+    setFolderId(defaultFolderId ?? "none")
     setError(null)
   }
 
@@ -96,7 +94,7 @@ export function DocumentUploadDialog({
       return
     }
 
-    if (relatedRecordType && !relatedRecordId) {
+    if (relatedRecordType !== "none" && !relatedRecordId) {
       setError("Select a related record.")
       return
     }
@@ -125,9 +123,9 @@ export function DocumentUploadDialog({
       const result = await createDocument({
         documentType,
         description,
-        relatedRecordType: relatedRecordType || undefined,
-        relatedRecordId: relatedRecordType ? relatedRecordId : undefined,
-        folderId: folderId || undefined,
+        relatedRecordType: relatedRecordType !== "none" ? relatedRecordType : undefined,
+        relatedRecordId: relatedRecordType !== "none" ? relatedRecordId : undefined,
+        folderId: folderId !== "none" ? folderId : undefined,
         fileName: file.name,
         fileSize: file.size,
         mimeType: file.type as (typeof ALLOWED_DOCUMENT_MIME_TYPES)[number],
@@ -186,18 +184,18 @@ export function DocumentUploadDialog({
             <Label htmlFor="document-type">
               Document Type<span className="text-destructive">*</span>
             </Label>
-            <select
-              id="document-type"
-              value={documentType}
-              onChange={(event) => setDocumentType(event.target.value as DocumentType)}
-              className={selectClassName}
-            >
-              {DOCUMENT_TYPES.map((value) => (
-                <option key={value} value={value}>
-                  {DOCUMENT_TYPE_LABELS[value]}
-                </option>
-              ))}
-            </select>
+            <Select value={documentType} onValueChange={(value) => setDocumentType(value as DocumentType)}>
+              <SelectTrigger id="document-type">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {DOCUMENT_TYPES.map((value) => (
+                  <SelectItem key={value} value={value}>
+                    {DOCUMENT_TYPE_LABELS[value]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="flex flex-col gap-1.5">
@@ -216,58 +214,63 @@ export function DocumentUploadDialog({
 
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="folder">Folder</Label>
-            <select
-              id="folder"
-              value={folderId}
-              onChange={(event) => setFolderId(event.target.value)}
-              className={selectClassName}
-            >
-              <option value="">No folder</option>
-              {folders.map((folder) => (
-                <option key={folder.id} value={folder.id}>
-                  {folder.name}
-                </option>
-              ))}
-            </select>
+            <Select value={folderId} onValueChange={setFolderId}>
+              <SelectTrigger id="folder">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">No folder</SelectItem>
+                {folders.map((folder) => (
+                  <SelectItem key={folder.id} value={folder.id}>
+                    {folder.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="related-record-type">Related Record Type</Label>
-              <select
-                id="related-record-type"
+              <Select
                 value={relatedRecordType}
-                onChange={(event) => {
-                  setRelatedRecordType(event.target.value as RelatedRecordType | "")
+                onValueChange={(value) => {
+                  setRelatedRecordType(value as RelatedRecordType | "none")
                   setRelatedRecordId("")
                 }}
-                className={selectClassName}
               >
-                <option value="">None</option>
-                {RELATED_RECORD_TYPES.map((value) => (
-                  <option key={value} value={value}>
-                    {RELATED_RECORD_TYPE_LABELS[value]}
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger id="related-record-type">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">None</SelectItem>
+                  {RELATED_RECORD_TYPES.map((value) => (
+                    <SelectItem key={value} value={value}>
+                      {RELATED_RECORD_TYPE_LABELS[value]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="related-record-id">Related Record</Label>
-              <select
-                id="related-record-id"
-                value={relatedRecordId}
-                onChange={(event) => setRelatedRecordId(event.target.value)}
-                disabled={!relatedRecordType}
-                className={selectClassName}
+              <Select
+                value={relatedRecordId || undefined}
+                onValueChange={setRelatedRecordId}
+                disabled={relatedRecordType === "none"}
               >
-                <option value="">{relatedRecordType ? "Select..." : "N/A"}</option>
-                {relatedOptions.map((option) => (
-                  <option key={option.id} value={option.id}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger id="related-record-id">
+                  <SelectValue placeholder={relatedRecordType !== "none" ? "Select..." : "N/A"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {relatedOptions.map((option) => (
+                    <SelectItem key={option.id} value={option.id}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
 

@@ -5,9 +5,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation"
 
 import { FilterBar } from "@/components/shared/filter-bar"
 import { SearchInput } from "@/components/shared/search-input"
-
-const selectClassName =
-  "h-8 rounded-lg border border-input bg-input backdrop-blur-sm px-2 text-sm text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 export function CustomerFilters() {
   const router = useRouter()
@@ -15,13 +13,13 @@ export function CustomerFilters() {
   const searchParams = useSearchParams()
 
   const [search, setSearch] = useState(searchParams.get("q") ?? "")
-  const status = searchParams.get("status") ?? ""
+  const status = searchParams.get("status") ?? "all"
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   function updateParams(updates: Record<string, string | null>) {
     const params = new URLSearchParams(searchParams.toString())
     for (const [key, value] of Object.entries(updates)) {
-      if (value) {
+      if (value && value !== "all") {
         params.set(key, value)
       } else {
         params.delete(key)
@@ -44,7 +42,7 @@ export function CustomerFilters() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search])
 
-  const hasActiveFilters = Boolean(search || status)
+  const hasActiveFilters = Boolean(search || status !== "all")
 
   return (
     <FilterBar
@@ -61,15 +59,16 @@ export function CustomerFilters() {
         className="max-w-xs"
       />
 
-      <select
-        value={status}
-        onChange={(event) => updateParams({ status: event.target.value || null })}
-        className={selectClassName}
-      >
-        <option value="">All customers</option>
-        <option value="active">Active</option>
-        <option value="inactive">Inactive</option>
-      </select>
+      <Select value={status} onValueChange={(value) => updateParams({ status: value })}>
+        <SelectTrigger className="w-40">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">All customers</SelectItem>
+          <SelectItem value="active">Active</SelectItem>
+          <SelectItem value="inactive">Inactive</SelectItem>
+        </SelectContent>
+      </Select>
     </FilterBar>
   )
 }

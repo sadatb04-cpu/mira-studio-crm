@@ -6,6 +6,7 @@ import { Download, FolderInput, Loader2, Trash2 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import {
   Dialog,
   DialogContent,
@@ -20,9 +21,6 @@ import { deleteDocument, downloadDocument } from "@/app/actions/documents"
 import { moveDocumentToFolder } from "@/app/actions/document-folders"
 import type { FolderOption } from "@/types/document"
 
-const selectClassName =
-  "h-8 w-full rounded-lg border border-input bg-input backdrop-blur-sm px-2 text-sm text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30"
-
 interface DocumentActionsProps {
   documentId: string
   fileName: string
@@ -35,7 +33,7 @@ export function DocumentActions({ documentId, fileName, currentFolderId, folders
   const canDeleteDocuments = useHasSpecialPermission("delete_documents")
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [moveOpen, setMoveOpen] = useState(false)
-  const [selectedFolderId, setSelectedFolderId] = useState(currentFolderId ?? "")
+  const [selectedFolderId, setSelectedFolderId] = useState(currentFolderId ?? "none")
   const [moveError, setMoveError] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [isDownloading, startDownload] = useTransition()
@@ -45,7 +43,7 @@ export function DocumentActions({ documentId, fileName, currentFolderId, folders
   function handleMove() {
     setMoveError(null)
     startMove(async () => {
-      const result = await moveDocumentToFolder(documentId, selectedFolderId || null)
+      const result = await moveDocumentToFolder(documentId, selectedFolderId !== "none" ? selectedFolderId : null)
       if (result.error) {
         setMoveError(result.error)
         return
@@ -99,7 +97,7 @@ export function DocumentActions({ documentId, fileName, currentFolderId, folders
           variant="outline"
           size="sm"
           onClick={() => {
-            setSelectedFolderId(currentFolderId ?? "")
+            setSelectedFolderId(currentFolderId ?? "none")
             setMoveError(null)
             setMoveOpen(true)
           }}
@@ -125,19 +123,19 @@ export function DocumentActions({ documentId, fileName, currentFolderId, folders
 
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="move-folder">Folder</Label>
-            <select
-              id="move-folder"
-              value={selectedFolderId}
-              onChange={(event) => setSelectedFolderId(event.target.value)}
-              className={selectClassName}
-            >
-              <option value="">No folder</option>
-              {folders.map((folder) => (
-                <option key={folder.id} value={folder.id}>
-                  {folder.name}
-                </option>
-              ))}
-            </select>
+            <Select value={selectedFolderId} onValueChange={setSelectedFolderId}>
+              <SelectTrigger id="move-folder">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">No folder</SelectItem>
+                {folders.map((folder) => (
+                  <SelectItem key={folder.id} value={folder.id}>
+                    {folder.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             {moveError && <p className="text-sm text-destructive">{moveError}</p>}
           </div>
 

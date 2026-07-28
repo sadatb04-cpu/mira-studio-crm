@@ -9,6 +9,7 @@ import { KeyRound, Loader2, PauseCircle, ShieldCheck, ShieldOff, Users } from "l
 import { SectionCard } from "@/components/shared/section-card"
 import { EmptyState } from "@/components/shared/empty-state"
 import { Button } from "@/components/ui/button"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ConfirmDialog } from "@/components/shared/confirm-dialog"
 import { AccountStatusBadge } from "@/components/settings/account-status-badge"
 import { ResetPasswordDialog } from "@/components/settings/reset-password-dialog"
@@ -16,9 +17,6 @@ import { setAccountStatus, updateUserRole } from "@/app/actions/user-accounts"
 import { USER_ROLES, USER_ROLE_LABELS } from "@/types/profile"
 import type { UserRole } from "@/types/profile"
 import type { AccountStatus, UserAccountListItem } from "@/types/user-account"
-
-const selectClassName =
-  "h-8 rounded-lg border border-input bg-input backdrop-blur-sm px-2 text-sm text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30"
 
 interface UserAccountsTableProps {
   accounts: UserAccountListItem[]
@@ -96,18 +94,22 @@ export function UserAccountsTable({ accounts }: UserAccountsTableProps) {
                 <td className="px-4 py-2.5 text-muted-foreground">{account.email}</td>
                 <td className="px-4 py-2.5">
                   <div className="flex items-center gap-1.5">
-                    <select
+                    <Select
                       value={account.role}
-                      onChange={(event) => handleRoleChange(account, event.target.value as UserRole)}
+                      onValueChange={(value) => handleRoleChange(account, value as UserRole)}
                       disabled={isPending && roleUpdatingId === account.id}
-                      className={selectClassName}
                     >
-                      {USER_ROLES.map((value) => (
-                        <option key={value} value={value}>
-                          {USER_ROLE_LABELS[value]}
-                        </option>
-                      ))}
-                    </select>
+                      <SelectTrigger className="h-8">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {USER_ROLES.map((value) => (
+                          <SelectItem key={value} value={value}>
+                            {USER_ROLE_LABELS[value]}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     {isPending && roleUpdatingId === account.id && <Loader2 className="size-3.5 animate-spin text-muted-foreground" />}
                   </div>
                 </td>

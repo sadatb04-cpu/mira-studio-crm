@@ -6,6 +6,7 @@ import { FileText, Loader2, Plus, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { SectionCard } from "@/components/shared/section-card"
 import { createClient } from "@/lib/supabase/client"
 import { createOrder, updateOrder } from "@/app/actions/orders"
@@ -16,9 +17,6 @@ import type { AllowedOrderFileMimeType, CustomerOption, OrderDetail } from "@/ty
 import type { OrderFormInput } from "@/lib/validations/order"
 
 const ORDER_FILES_BUCKET = "documents"
-
-const selectClassName =
-  "h-8 w-full rounded-lg border border-input bg-input backdrop-blur-sm px-2 text-sm text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30"
 
 interface FileRow {
   key: string
@@ -190,20 +188,19 @@ export function OrderForm({ mode, order, customers: initialCustomers }: OrderFor
             <>
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="customer">Customer</Label>
-                <select
-                  id="customer"
-                  value={customerId}
-                  onChange={(event) => setCustomerId(event.target.value)}
-                  className={selectClassName}
-                >
-                  <option value="">Select a customer...</option>
-                  {customers.map((customer) => (
-                    <option key={customer.id} value={customer.id}>
-                      {customer.full_name}
-                      {customer.company_name ? ` (${customer.company_name})` : ""}
-                    </option>
-                  ))}
-                </select>
+                <Select value={customerId || undefined} onValueChange={setCustomerId}>
+                  <SelectTrigger id="customer">
+                    <SelectValue placeholder="Select a customer..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {customers.map((customer) => (
+                      <SelectItem key={customer.id} value={customer.id}>
+                        {customer.full_name}
+                        {customer.company_name ? ` (${customer.company_name})` : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <Button type="button" variant="outline" size="sm" onClick={() => setIsAddingCustomer(true)} className="self-start">
                 <Plus className="size-3.5" data-icon="inline-start" />

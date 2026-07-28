@@ -5,14 +5,12 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation"
 
 import { FilterBar } from "@/components/shared/filter-bar"
 import { SearchInput } from "@/components/shared/search-input"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { PRODUCTION_JOB_STATUS_LABELS, PRODUCTION_PRIORITIES, PRODUCTION_PRIORITY_LABELS } from "@/types/production"
 
 // Only the statuses this sprint's workflow actually produces - "rework"
 // and "on_hold" are valid enum values but nothing in this flow sets them.
 const FILTERABLE_STATUSES = ["queued", "in_progress", "quality_check", "completed", "cancelled"] as const
-
-const selectClassName =
-  "h-8 rounded-lg border border-input bg-input backdrop-blur-sm px-2 text-sm text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30"
 
 export function ProductionFilters() {
   const router = useRouter()
@@ -20,14 +18,14 @@ export function ProductionFilters() {
   const searchParams = useSearchParams()
 
   const [search, setSearch] = useState(searchParams.get("q") ?? "")
-  const status = searchParams.get("status") ?? ""
-  const priority = searchParams.get("priority") ?? ""
+  const status = searchParams.get("status") ?? "all"
+  const priority = searchParams.get("priority") ?? "all"
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   function updateParams(updates: Record<string, string | null>) {
     const params = new URLSearchParams(searchParams.toString())
     for (const [key, value] of Object.entries(updates)) {
-      if (value) {
+      if (value && value !== "all") {
         params.set(key, value)
       } else {
         params.delete(key)
@@ -50,7 +48,7 @@ export function ProductionFilters() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search])
 
-  const hasActiveFilters = Boolean(search || status || priority)
+  const hasActiveFilters = Boolean(search || status !== "all" || priority !== "all")
 
   return (
     <FilterBar
@@ -62,31 +60,33 @@ export function ProductionFilters() {
     >
       <SearchInput value={search} onChange={setSearch} placeholder="Search by job number..." className="max-w-xs" />
 
-      <select
-        value={status}
-        onChange={(event) => updateParams({ status: event.target.value || null })}
-        className={selectClassName}
-      >
-        <option value="">All statuses</option>
-        {FILTERABLE_STATUSES.map((value) => (
-          <option key={value} value={value}>
-            {PRODUCTION_JOB_STATUS_LABELS[value]}
-          </option>
-        ))}
-      </select>
+      <Select value={status} onValueChange={(value) => updateParams({ status: value })}>
+        <SelectTrigger className="w-40">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">All statuses</SelectItem>
+          {FILTERABLE_STATUSES.map((value) => (
+            <SelectItem key={value} value={value}>
+              {PRODUCTION_JOB_STATUS_LABELS[value]}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
 
-      <select
-        value={priority}
-        onChange={(event) => updateParams({ priority: event.target.value || null })}
-        className={selectClassName}
-      >
-        <option value="">All priorities</option>
-        {PRODUCTION_PRIORITIES.map((value) => (
-          <option key={value} value={value}>
-            {PRODUCTION_PRIORITY_LABELS[value]}
-          </option>
-        ))}
-      </select>
+      <Select value={priority} onValueChange={(value) => updateParams({ priority: value })}>
+        <SelectTrigger className="w-36">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">All priorities</SelectItem>
+          {PRODUCTION_PRIORITIES.map((value) => (
+            <SelectItem key={value} value={value}>
+              {PRODUCTION_PRIORITY_LABELS[value]}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
     </FilterBar>
   )
 }

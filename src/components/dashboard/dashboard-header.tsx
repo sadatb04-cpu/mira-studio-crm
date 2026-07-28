@@ -4,11 +4,9 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation"
 
 import { PageHeader } from "@/components/shared/page-header"
 import { Input } from "@/components/ui/input"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { DASHBOARD_DATE_RANGE_PRESETS, DATE_RANGE_PRESET_LABELS } from "@/types/report"
 import type { DateRangePreset } from "@/types/report"
-
-const selectClassName =
-  "h-8 rounded-lg border border-input bg-input backdrop-blur-sm px-2 text-sm text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30"
 
 interface DashboardHeaderProps {
   preset: DateRangePreset
@@ -40,17 +38,18 @@ export function DashboardHeader({ preset, from, to }: DashboardHeaderProps) {
       description="A live view of revenue, operations, and workforce performance."
       actions={
         <div className="flex flex-wrap items-center gap-2">
-          <select
-            value={preset}
-            onChange={(event) => updateParams({ preset: event.target.value, from: null, to: null })}
-            className={selectClassName}
-          >
-            {DASHBOARD_DATE_RANGE_PRESETS.map((value) => (
-              <option key={value} value={value}>
-                {DATE_RANGE_PRESET_LABELS[value]}
-              </option>
-            ))}
-          </select>
+          <Select value={preset} onValueChange={(value) => updateParams({ preset: value, from: null, to: null })}>
+            <SelectTrigger className="h-8">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {DASHBOARD_DATE_RANGE_PRESETS.map((value) => (
+                <SelectItem key={value} value={value}>
+                  {DATE_RANGE_PRESET_LABELS[value]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
 
           {preset === "custom" && (
             <>

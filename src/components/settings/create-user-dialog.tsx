@@ -8,6 +8,7 @@ import { Loader2, Plus, Wand2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import {
   Dialog,
   DialogContent,
@@ -21,9 +22,6 @@ import { createUserAccount } from "@/app/actions/user-accounts"
 import { DEPARTMENTS, DEPARTMENT_LABELS, USER_ROLES, USER_ROLE_LABELS } from "@/types/profile"
 import type { Department, UserRole } from "@/types/profile"
 import type { UnlinkedEmployeeOption } from "@/types/user-account"
-
-const selectClassName =
-  "h-8 w-full rounded-lg border border-input bg-input backdrop-blur-sm px-2 text-sm text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30"
 
 const PASSWORD_WORDS = ["Mira", "Studio", "Work", "Atelier", "Forge", "Gem"]
 const PASSWORD_SYMBOLS = ["@", "#", "!", "$"]
@@ -189,54 +187,60 @@ export function CreateUserDialog({ unlinkedEmployees }: CreateUserDialogProps) {
               <Label htmlFor="role">
                 Role<span className="text-destructive">*</span>
               </Label>
-              <select
-                id="role"
-                value={role}
-                onChange={(event) => setRole(event.target.value as UserRole)}
-                className={selectClassName}
-              >
-                {USER_ROLES.map((value) => (
-                  <option key={value} value={value}>
-                    {USER_ROLE_LABELS[value]}
-                  </option>
-                ))}
-              </select>
+              <Select value={role} onValueChange={(value) => setRole(value as UserRole)}>
+                <SelectTrigger id="role">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {USER_ROLES.map((value) => (
+                    <SelectItem key={value} value={value}>
+                      {USER_ROLE_LABELS[value]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="department">Department</Label>
-              <select
-                id="department"
-                value={department}
-                onChange={(event) => setDepartment(event.target.value as Department | "")}
-                className={selectClassName}
+              <Select
+                value={department || "none"}
+                onValueChange={(value) => setDepartment(value === "none" ? "" : (value as Department))}
               >
-                <option value="">None</option>
-                {DEPARTMENTS.map((value) => (
-                  <option key={value} value={value}>
-                    {DEPARTMENT_LABELS[value]}
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger id="department">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">None</SelectItem>
+                  {DEPARTMENTS.map((value) => (
+                    <SelectItem key={value} value={value}>
+                      {DEPARTMENT_LABELS[value]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="link-employee">Link Employee</Label>
-            <select
-              id="link-employee"
-              value={employeeId}
-              onChange={(event) => setEmployeeId(event.target.value)}
-              className={selectClassName}
+            <Select
+              value={employeeId || "none"}
+              onValueChange={(value) => setEmployeeId(value === "none" ? "" : value)}
             >
-              <option value="">No employee record</option>
-              {unlinkedEmployees.map((employee) => (
-                <option key={employee.id} value={employee.id}>
-                  {employee.full_name}
-                  {employee.email ? ` (${employee.email})` : ""}
-                </option>
-              ))}
-            </select>
+              <SelectTrigger id="link-employee">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">No employee record</SelectItem>
+                {unlinkedEmployees.map((employee) => (
+                  <SelectItem key={employee.id} value={employee.id}>
+                    {employee.full_name}
+                    {employee.email ? ` (${employee.email})` : ""}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             {unlinkedEmployees.length === 0 && (
               <p className="text-xs text-muted-foreground">Every employee already has a linked account.</p>
             )}

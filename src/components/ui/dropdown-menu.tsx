@@ -24,7 +24,7 @@ function DropdownMenuContent({ className, sideOffset = 6, ...props }: React.Comp
         data-slot="dropdown-menu-content"
         sideOffset={sideOffset}
         className={cn(
-          "glass-surface z-50 min-w-48 overflow-hidden rounded-xl p-1 text-popover-foreground",
+          "glass-surface thin-scrollbar z-[60] min-w-48 overflow-hidden rounded-2xl p-1 text-popover-foreground",
           "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
           className
         )}
@@ -44,7 +44,7 @@ function DropdownMenuItem({
       data-slot="dropdown-menu-item"
       data-variant={variant}
       className={cn(
-        "flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-sm outline-none select-none",
+        "flex cursor-pointer items-center gap-2 rounded-xl px-2.5 py-2 text-sm outline-none select-none transition-all duration-150 ease-premium",
         "focus:bg-accent focus:text-accent-foreground",
         "data-[variant=destructive]:text-destructive data-[variant=destructive]:focus:bg-destructive/10 data-[variant=destructive]:focus:text-destructive",
         "[&_svg]:pointer-events-none [&_svg]:size-3.5 [&_svg]:shrink-0",

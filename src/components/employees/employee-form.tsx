@@ -5,15 +5,13 @@ import { useState, useTransition } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { SectionCard } from "@/components/shared/section-card"
 import { createEmployee, updateEmployee } from "@/app/actions/employees"
 import { DEPARTMENTS, DEPARTMENT_LABELS } from "@/types/profile"
 import type { Department } from "@/types/profile"
 import { EMPLOYMENT_STATUSES, EMPLOYMENT_STATUS_LABELS } from "@/types/employee"
 import type { EmployeeDetail, EmploymentStatus } from "@/types/employee"
-
-const selectClassName =
-  "h-8 w-full rounded-lg border border-input bg-input backdrop-blur-sm px-2 text-sm text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30"
 
 type EmployeeFormProps = { mode: "create"; employee?: undefined } | { mode: "edit"; employee: EmployeeDetail }
 
@@ -24,7 +22,7 @@ export function EmployeeForm(props: EmployeeFormProps) {
   const [fullName, setFullName] = useState(employee?.full_name ?? "")
   const [email, setEmail] = useState(employee?.email ?? "")
   const [phone, setPhone] = useState(employee?.phone ?? "")
-  const [department, setDepartment] = useState<Department | "">(employee?.department ?? "")
+  const [department, setDepartment] = useState<Department | "none">(employee?.department ?? "none")
   const [position, setPosition] = useState(employee?.position ?? "")
   const [employmentStatus, setEmploymentStatus] = useState<EmploymentStatus>(
     employee?.employment_status ?? "active"
@@ -41,7 +39,7 @@ export function EmployeeForm(props: EmployeeFormProps) {
       full_name: fullName,
       email: email || undefined,
       phone: phone || undefined,
-      department: department || undefined,
+      department: department !== "none" ? department : undefined,
       position,
       employment_status: employmentStatus,
       hire_date: hireDate,
@@ -81,19 +79,19 @@ export function EmployeeForm(props: EmployeeFormProps) {
 
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="department">Department</Label>
-            <select
-              id="department"
-              value={department}
-              onChange={(event) => setDepartment(event.target.value as Department | "")}
-              className={selectClassName}
-            >
-              <option value="">None</option>
-              {DEPARTMENTS.map((value) => (
-                <option key={value} value={value}>
-                  {DEPARTMENT_LABELS[value]}
-                </option>
-              ))}
-            </select>
+            <Select value={department} onValueChange={(value) => setDepartment(value as Department | "none")}>
+              <SelectTrigger id="department">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">None</SelectItem>
+                {DEPARTMENTS.map((value) => (
+                  <SelectItem key={value} value={value}>
+                    {DEPARTMENT_LABELS[value]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
       </SectionCard>
@@ -111,18 +109,18 @@ export function EmployeeForm(props: EmployeeFormProps) {
             <Label htmlFor="employment_status">
               Employment Status<span className="text-destructive">*</span>
             </Label>
-            <select
-              id="employment_status"
-              value={employmentStatus}
-              onChange={(event) => setEmploymentStatus(event.target.value as EmploymentStatus)}
-              className={selectClassName}
-            >
-              {EMPLOYMENT_STATUSES.map((value) => (
-                <option key={value} value={value}>
-                  {EMPLOYMENT_STATUS_LABELS[value]}
-                </option>
-              ))}
-            </select>
+            <Select value={employmentStatus} onValueChange={(value) => setEmploymentStatus(value as EmploymentStatus)}>
+              <SelectTrigger id="employment_status">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {EMPLOYMENT_STATUSES.map((value) => (
+                  <SelectItem key={value} value={value}>
+                    {EMPLOYMENT_STATUS_LABELS[value]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="flex flex-col gap-1.5">

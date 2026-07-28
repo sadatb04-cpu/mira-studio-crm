@@ -5,12 +5,10 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation"
 
 import { FilterBar } from "@/components/shared/filter-bar"
 import { SearchInput } from "@/components/shared/search-input"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { INVENTORY_CATEGORIES, INVENTORY_CATEGORY_LABELS, STOCK_STATUS_LABELS } from "@/types/inventory"
 
 const STOCK_STATUS_OPTIONS = ["in_stock", "low_stock", "out_of_stock"] as const
-
-const selectClassName =
-  "h-8 rounded-lg border border-input bg-input backdrop-blur-sm px-2 text-sm text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30"
 
 export function InventoryFilters() {
   const router = useRouter()
@@ -18,14 +16,14 @@ export function InventoryFilters() {
   const searchParams = useSearchParams()
 
   const [search, setSearch] = useState(searchParams.get("q") ?? "")
-  const category = searchParams.get("category") ?? ""
-  const stockStatus = searchParams.get("stockStatus") ?? ""
+  const category = searchParams.get("category") ?? "all"
+  const stockStatus = searchParams.get("stockStatus") ?? "all"
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   function updateParams(updates: Record<string, string | null>) {
     const params = new URLSearchParams(searchParams.toString())
     for (const [key, value] of Object.entries(updates)) {
-      if (value) {
+      if (value && value !== "all") {
         params.set(key, value)
       } else {
         params.delete(key)
@@ -48,7 +46,7 @@ export function InventoryFilters() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search])
 
-  const hasActiveFilters = Boolean(search || category || stockStatus)
+  const hasActiveFilters = Boolean(search || category !== "all" || stockStatus !== "all")
 
   return (
     <FilterBar
@@ -65,31 +63,33 @@ export function InventoryFilters() {
         className="max-w-xs"
       />
 
-      <select
-        value={category}
-        onChange={(event) => updateParams({ category: event.target.value || null })}
-        className={selectClassName}
-      >
-        <option value="">All categories</option>
-        {INVENTORY_CATEGORIES.map((value) => (
-          <option key={value} value={value}>
-            {INVENTORY_CATEGORY_LABELS[value]}
-          </option>
-        ))}
-      </select>
+      <Select value={category} onValueChange={(value) => updateParams({ category: value })}>
+        <SelectTrigger className="w-44">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">All categories</SelectItem>
+          {INVENTORY_CATEGORIES.map((value) => (
+            <SelectItem key={value} value={value}>
+              {INVENTORY_CATEGORY_LABELS[value]}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
 
-      <select
-        value={stockStatus}
-        onChange={(event) => updateParams({ stockStatus: event.target.value || null })}
-        className={selectClassName}
-      >
-        <option value="">All stock statuses</option>
-        {STOCK_STATUS_OPTIONS.map((value) => (
-          <option key={value} value={value}>
-            {STOCK_STATUS_LABELS[value]}
-          </option>
-        ))}
-      </select>
+      <Select value={stockStatus} onValueChange={(value) => updateParams({ stockStatus: value })}>
+        <SelectTrigger className="w-44">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">All stock statuses</SelectItem>
+          {STOCK_STATUS_OPTIONS.map((value) => (
+            <SelectItem key={value} value={value}>
+              {STOCK_STATUS_LABELS[value]}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
     </FilterBar>
   )
 }
