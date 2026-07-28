@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import { ThemeProvider } from "@/lib/theme";
 import { AuroraBackground } from "@/components/layout/aurora-background";
 import { BrandingProvider } from "@/components/providers/branding-provider";
+import { GlobalLoaderProvider } from "@/components/providers/global-loader-provider";
 import { getCachedBranding } from "@/lib/supabase/branding";
 
 const LIGHT_THEMES = ["rose-gold", "arctic"];
@@ -67,9 +68,11 @@ export default async function RootLayout({
         />
         <BrandingProvider branding={branding}>
           <ThemeProvider>
-            <AuroraBackground />
-            {children}
-            <Toaster position="bottom-right" theme="system" />
+            <GlobalLoaderProvider>
+              <AuroraBackground />
+              {children}
+              <Toaster position="bottom-right" theme="system" />
+            </GlobalLoaderProvider>
           </ThemeProvider>
         </BrandingProvider>
       </body>
