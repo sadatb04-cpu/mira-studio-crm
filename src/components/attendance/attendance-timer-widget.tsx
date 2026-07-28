@@ -20,7 +20,12 @@ export function AttendanceTimerWidget({ sessions }: AttendanceTimerWidgetProps) 
   const router = useRouter()
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
-  const [now, setNow] = useState(() => Date.now())
+  // Starts null so the first client render matches the server-rendered
+  // output exactly (both show the frozen totals with zero live elapsed
+  // time) - seeding this from Date.now() during render would make the
+  // server and client disagree by however many milliseconds passed
+  // between the two, causing a text hydration mismatch on the live timer.
+  const [now, setNow] = useState<number | null>(null)
 
   // An auto-inserted "absent" row (no check-in ever happened) isn't a real
   // session - exclude it from the count/summary/button-label logic below,
@@ -39,7 +44,9 @@ export function AttendanceTimerWidget({ sessions }: AttendanceTimerWidgetProps) 
   }, [isLive])
 
   const segmentElapsedSeconds =
-    isLive && latest?.currentSegmentStartedAt ? Math.max(0, Math.floor((now - new Date(latest.currentSegmentStartedAt).getTime()) / 1000)) : 0
+    isLive && latest?.currentSegmentStartedAt && now !== null
+      ? Math.max(0, Math.floor((now - new Date(latest.currentSegmentStartedAt).getTime()) / 1000))
+      : 0
 
   // The prominent "Current Session" clock tracks only this session's own
   // WORK time - it freezes the instant a break starts and resumes exactly

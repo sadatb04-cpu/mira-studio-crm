@@ -22,8 +22,10 @@ export function SessionHistoryList({ sessions }: SessionHistoryListProps) {
 
   // Live totals re-render every second so a still-running session's
   // "Worked" figure keeps up with the prominent timer above it, without
-  // needing its own separate polling loop.
-  const [now, setNow] = useState(() => Date.now())
+  // needing its own separate polling loop. Starts null (not Date.now())
+  // so the first client render matches the server-rendered output exactly
+  // - see attendance-timer-widget.tsx for why.
+  const [now, setNow] = useState<number | null>(null)
   const hasRunningSession = realSessions.some((session) => session.status === "working" || session.status === "on_break")
 
   useEffect(() => {
@@ -46,7 +48,7 @@ export function SessionHistoryList({ sessions }: SessionHistoryListProps) {
         {realSessions.map((session, index) => {
           const isRunning = session.status === "working" || session.status === "on_break"
           const segmentElapsed =
-            isRunning && session.currentSegmentStartedAt
+            isRunning && session.currentSegmentStartedAt && now !== null
               ? Math.max(0, Math.floor((now - new Date(session.currentSegmentStartedAt).getTime()) / 1000))
               : 0
           const workedSeconds = session.totalWorkedSeconds + (session.status === "working" ? segmentElapsed : 0)
