@@ -208,6 +208,9 @@ export type Database = {
           file_url: string
           folder_id: string | null
           id: string
+          inventory_item_id: string | null
+          jewelry_item_id: string | null
+          loose_diamond_id: string | null
           mime_type: string | null
           order_id: string | null
           order_item_id: string | null
@@ -225,6 +228,9 @@ export type Database = {
           file_url: string
           folder_id?: string | null
           id?: string
+          inventory_item_id?: string | null
+          jewelry_item_id?: string | null
+          loose_diamond_id?: string | null
           mime_type?: string | null
           order_id?: string | null
           order_item_id?: string | null
@@ -242,6 +248,9 @@ export type Database = {
           file_url?: string
           folder_id?: string | null
           id?: string
+          inventory_item_id?: string | null
+          jewelry_item_id?: string | null
+          loose_diamond_id?: string | null
           mime_type?: string | null
           order_id?: string | null
           order_item_id?: string | null
@@ -262,6 +271,27 @@ export type Database = {
             columns: ["folder_id"]
             isOneToOne: false
             referencedRelation: "document_folders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "documents_inventory_item_id_fkey"
+            columns: ["inventory_item_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "documents_jewelry_item_id_fkey"
+            columns: ["jewelry_item_id"]
+            isOneToOne: false
+            referencedRelation: "jewelry_inventory"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "documents_loose_diamond_id_fkey"
+            columns: ["loose_diamond_id"]
+            isOneToOne: false
+            referencedRelation: "loose_diamonds"
             referencedColumns: ["id"]
           },
           {
@@ -347,54 +377,134 @@ export type Database = {
           },
         ]
       }
+      inventory_import_batches: {
+        Row: {
+          category: string
+          created_at: string
+          created_count: number
+          error_count: number
+          google_sheet_url: string | null
+          id: string
+          imported_by: string | null
+          skipped_count: number
+          source_name: string
+          source_type: string
+          total_rows: number
+          updated_count: number
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          created_count?: number
+          error_count?: number
+          google_sheet_url?: string | null
+          id?: string
+          imported_by?: string | null
+          skipped_count?: number
+          source_name: string
+          source_type: string
+          total_rows?: number
+          updated_count?: number
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          created_count?: number
+          error_count?: number
+          google_sheet_url?: string | null
+          id?: string
+          imported_by?: string | null
+          skipped_count?: number
+          source_name?: string
+          source_type?: string
+          total_rows?: number
+          updated_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_import_batches_imported_by_fkey"
+            columns: ["imported_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       inventory_items: {
         Row: {
           category: Database["public"]["Enums"]["inventory_category"]
+          certificate_number: string | null
           created_at: string
           id: string
           is_active: boolean
+          metal: string | null
           minimum_stock: number
           name: string
+          notes: string | null
+          purity: string | null
           quantity_on_hand: number
+          reorder_level: number
+          selling_price: number
           sku: string
+          stone_type: string | null
+          stone_weight: number | null
           storage_location_id: string | null
           subcategory: string | null
           supplier_id: string | null
           unit: string
           unit_cost: number
           updated_at: string
+          weight: number | null
         }
         Insert: {
           category: Database["public"]["Enums"]["inventory_category"]
+          certificate_number?: string | null
           created_at?: string
           id?: string
           is_active?: boolean
+          metal?: string | null
           minimum_stock?: number
           name: string
+          notes?: string | null
+          purity?: string | null
           quantity_on_hand?: number
+          reorder_level?: number
+          selling_price?: number
           sku: string
+          stone_type?: string | null
+          stone_weight?: number | null
           storage_location_id?: string | null
           subcategory?: string | null
           supplier_id?: string | null
           unit: string
           unit_cost?: number
           updated_at?: string
+          weight?: number | null
         }
         Update: {
           category?: Database["public"]["Enums"]["inventory_category"]
+          certificate_number?: string | null
           created_at?: string
           id?: string
           is_active?: boolean
+          metal?: string | null
           minimum_stock?: number
           name?: string
+          notes?: string | null
+          purity?: string | null
           quantity_on_hand?: number
+          reorder_level?: number
+          selling_price?: number
           sku?: string
+          stone_type?: string | null
+          stone_weight?: number | null
           storage_location_id?: string | null
           subcategory?: string | null
           supplier_id?: string | null
           unit?: string
           unit_cost?: number
           updated_at?: string
+          weight?: number | null
         }
         Relationships: [
           {
@@ -409,6 +519,79 @@ export type Database = {
             columns: ["supplier_id"]
             isOneToOne: false
             referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inventory_stock_movements: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          jewelry_item_id: string | null
+          loose_diamond_id: string | null
+          movement_type: Database["public"]["Enums"]["stock_movement_type"]
+          new_status: string | null
+          notes: string | null
+          previous_status: string | null
+          quantity_delta: number | null
+          reference_id: string | null
+          reference_type:
+            | Database["public"]["Enums"]["inventory_reference_type"]
+            | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          jewelry_item_id?: string | null
+          loose_diamond_id?: string | null
+          movement_type: Database["public"]["Enums"]["stock_movement_type"]
+          new_status?: string | null
+          notes?: string | null
+          previous_status?: string | null
+          quantity_delta?: number | null
+          reference_id?: string | null
+          reference_type?:
+            | Database["public"]["Enums"]["inventory_reference_type"]
+            | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          jewelry_item_id?: string | null
+          loose_diamond_id?: string | null
+          movement_type?: Database["public"]["Enums"]["stock_movement_type"]
+          new_status?: string | null
+          notes?: string | null
+          previous_status?: string | null
+          quantity_delta?: number | null
+          reference_id?: string | null
+          reference_type?:
+            | Database["public"]["Enums"]["inventory_reference_type"]
+            | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_stock_movements_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_stock_movements_jewelry_item_id_fkey"
+            columns: ["jewelry_item_id"]
+            isOneToOne: false
+            referencedRelation: "jewelry_inventory"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_stock_movements_loose_diamond_id_fkey"
+            columns: ["loose_diamond_id"]
+            isOneToOne: false
+            referencedRelation: "loose_diamonds"
             referencedColumns: ["id"]
           },
         ]
@@ -460,6 +643,189 @@ export type Database = {
             columns: ["inventory_item_id"]
             isOneToOne: false
             referencedRelation: "inventory_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      jewelry_inventory: {
+        Row: {
+          category: string | null
+          cost: number
+          created_at: string
+          created_by: string | null
+          diamond_type: string | null
+          diamond_weight: number | null
+          gross_weight: number | null
+          id: string
+          is_active: boolean
+          location: string | null
+          metal: string | null
+          metal_purity: string | null
+          net_weight: number | null
+          notes: string | null
+          product_name: string
+          quantity: number
+          reorder_level: number
+          selling_price: number
+          sku: string
+          status: string
+          supplier_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          category?: string | null
+          cost?: number
+          created_at?: string
+          created_by?: string | null
+          diamond_type?: string | null
+          diamond_weight?: number | null
+          gross_weight?: number | null
+          id?: string
+          is_active?: boolean
+          location?: string | null
+          metal?: string | null
+          metal_purity?: string | null
+          net_weight?: number | null
+          notes?: string | null
+          product_name: string
+          quantity?: number
+          reorder_level?: number
+          selling_price?: number
+          sku: string
+          status?: string
+          supplier_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          category?: string | null
+          cost?: number
+          created_at?: string
+          created_by?: string | null
+          diamond_type?: string | null
+          diamond_weight?: number | null
+          gross_weight?: number | null
+          id?: string
+          is_active?: boolean
+          location?: string | null
+          metal?: string | null
+          metal_purity?: string | null
+          net_weight?: number | null
+          notes?: string | null
+          product_name?: string
+          quantity?: number
+          reorder_level?: number
+          selling_price?: number
+          sku?: string
+          status?: string
+          supplier_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "jewelry_inventory_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jewelry_inventory_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      loose_diamonds: {
+        Row: {
+          carat: number
+          clarity: string | null
+          color: string | null
+          cost_usd: number
+          country_of_origin: string | null
+          created_at: string
+          created_by: string | null
+          cut: string | null
+          date_added: string
+          fluorescence: string | null
+          growth_type: string | null
+          id: string
+          is_active: boolean
+          lab: string | null
+          notes: string | null
+          polish: string | null
+          report_number: string
+          selling_price: number
+          shape: string | null
+          status: Database["public"]["Enums"]["loose_diamond_status"]
+          supplier_id: string | null
+          symmetry: string | null
+          updated_at: string
+        }
+        Insert: {
+          carat: number
+          clarity?: string | null
+          color?: string | null
+          cost_usd?: number
+          country_of_origin?: string | null
+          created_at?: string
+          created_by?: string | null
+          cut?: string | null
+          date_added?: string
+          fluorescence?: string | null
+          growth_type?: string | null
+          id?: string
+          is_active?: boolean
+          lab?: string | null
+          notes?: string | null
+          polish?: string | null
+          report_number: string
+          selling_price?: number
+          shape?: string | null
+          status?: Database["public"]["Enums"]["loose_diamond_status"]
+          supplier_id?: string | null
+          symmetry?: string | null
+          updated_at?: string
+        }
+        Update: {
+          carat?: number
+          clarity?: string | null
+          color?: string | null
+          cost_usd?: number
+          country_of_origin?: string | null
+          created_at?: string
+          created_by?: string | null
+          cut?: string | null
+          date_added?: string
+          fluorescence?: string | null
+          growth_type?: string | null
+          id?: string
+          is_active?: boolean
+          lab?: string | null
+          notes?: string | null
+          polish?: string | null
+          report_number?: string
+          selling_price?: number
+          shape?: string | null
+          status?: Database["public"]["Enums"]["loose_diamond_status"]
+          supplier_id?: string | null
+          symmetry?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "loose_diamonds_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loose_diamonds_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
             referencedColumns: ["id"]
           },
         ]
@@ -1229,6 +1595,8 @@ export type Database = {
           sessions_closed: number
         }[]
       }
+      show_limit: { Args: never; Returns: number }
+      show_trgm: { Args: { "": string }; Returns: string[] }
     }
     Enums: {
       account_status: "active" | "suspended" | "disabled" | "pending_invite"
@@ -1250,6 +1618,8 @@ export type Database = {
         | "setting"
         | "document_folder"
         | "attendance_record"
+        | "loose_diamond"
+        | "jewelry_item"
       attendance_status:
         | "working"
         | "on_break"
@@ -1295,6 +1665,7 @@ export type Database = {
         | "return"
         | "finished_goods"
         | "sale"
+      loose_diamond_status: "available" | "reserved" | "sold" | "on_memo"
       notification_type:
         | "task_assigned"
         | "order_status_changed"
@@ -1351,6 +1722,14 @@ export type Database = {
         | "completed"
         | "skipped"
       quotation_status: "draft" | "sent" | "accepted" | "rejected"
+      stock_movement_type:
+        | "purchase"
+        | "sale"
+        | "production_use"
+        | "adjustment"
+        | "return"
+        | "status_change"
+        | "initial"
       stone_shape:
         | "round"
         | "oval"
@@ -1530,6 +1909,8 @@ export const Constants = {
         "setting",
         "document_folder",
         "attendance_record",
+        "loose_diamond",
+        "jewelry_item",
       ],
       attendance_status: [
         "working",
@@ -1582,6 +1963,7 @@ export const Constants = {
         "finished_goods",
         "sale",
       ],
+      loose_diamond_status: ["available", "reserved", "sold", "on_memo"],
       notification_type: [
         "task_assigned",
         "order_status_changed",
@@ -1644,6 +2026,15 @@ export const Constants = {
         "skipped",
       ],
       quotation_status: ["draft", "sent", "accepted", "rejected"],
+      stock_movement_type: [
+        "purchase",
+        "sale",
+        "production_use",
+        "adjustment",
+        "return",
+        "status_change",
+        "initial",
+      ],
       stone_shape: [
         "round",
         "oval",

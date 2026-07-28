@@ -17,7 +17,7 @@ const BUCKET = "documents"
 const SIGNED_URL_EXPIRY_SECONDS = 60 * 10
 
 const DOCUMENT_COLUMNS =
-  "id, file_name, description, document_type, file_size, mime_type, file_url, created_at, updated_at, order_id, customer_id, production_job_id, folder_id, uploaded_by"
+  "id, file_name, description, document_type, file_size, mime_type, file_url, created_at, updated_at, order_id, customer_id, production_job_id, inventory_item_id, loose_diamond_id, jewelry_item_id, folder_id, uploaded_by"
 
 interface RawDocumentRow {
   id: string
@@ -32,6 +32,9 @@ interface RawDocumentRow {
   order_id: string | null
   customer_id: string | null
   production_job_id: string | null
+  inventory_item_id: string | null
+  loose_diamond_id: string | null
+  jewelry_item_id: string | null
   folder_id: string | null
   uploaded_by: string | null
   uploader: { full_name: string } | null
@@ -49,38 +52,76 @@ interface GetDocumentsFilters {
 
 async function resolveRelatedRecordMaps(
   supabase: SupabaseClient,
-  rows: Pick<RawDocumentRow, "order_id" | "customer_id" | "production_job_id">[]
+  rows: Pick<
+    RawDocumentRow,
+    "order_id" | "customer_id" | "production_job_id" | "inventory_item_id" | "loose_diamond_id" | "jewelry_item_id"
+  >[]
 ) {
   const orderIds = [...new Set(rows.filter((row) => row.order_id).map((row) => row.order_id as string))]
   const customerIds = [...new Set(rows.filter((row) => row.customer_id).map((row) => row.customer_id as string))]
   const jobIds = [...new Set(rows.filter((row) => row.production_job_id).map((row) => row.production_job_id as string))]
+  const inventoryItemIds = [
+    ...new Set(rows.filter((row) => row.inventory_item_id).map((row) => row.inventory_item_id as string)),
+  ]
+  const looseDiamondIds = [
+    ...new Set(rows.filter((row) => row.loose_diamond_id).map((row) => row.loose_diamond_id as string)),
+  ]
+  const jewelryItemIds = [
+    ...new Set(rows.filter((row) => row.jewelry_item_id).map((row) => row.jewelry_item_id as string)),
+  ]
 
-  const [ordersResult, customersResult, jobsResult] = await Promise.all([
-    orderIds.length > 0
-      ? supabase.from("orders").select("id, order_number").in("id", orderIds)
-      : Promise.resolve({ data: [] as { id: string; order_number: string }[], error: null }),
-    customerIds.length > 0
-      ? supabase.from("customers").select("id, full_name").in("id", customerIds)
-      : Promise.resolve({ data: [] as { id: string; full_name: string }[], error: null }),
-    jobIds.length > 0
-      ? supabase.from("production_jobs").select("id, job_number").in("id", jobIds)
-      : Promise.resolve({ data: [] as { id: string; job_number: string }[], error: null }),
-  ])
+  const [ordersResult, customersResult, jobsResult, inventoryItemsResult, looseDiamondsResult, jewelryItemsResult] =
+    await Promise.all([
+      orderIds.length > 0
+        ? supabase.from("orders").select("id, order_number").in("id", orderIds)
+        : Promise.resolve({ data: [] as { id: string; order_number: string }[], error: null }),
+      customerIds.length > 0
+        ? supabase.from("customers").select("id, full_name").in("id", customerIds)
+        : Promise.resolve({ data: [] as { id: string; full_name: string }[], error: null }),
+      jobIds.length > 0
+        ? supabase.from("production_jobs").select("id, job_number").in("id", jobIds)
+        : Promise.resolve({ data: [] as { id: string; job_number: string }[], error: null }),
+      inventoryItemIds.length > 0
+        ? supabase.from("inventory_items").select("id, name").in("id", inventoryItemIds)
+        : Promise.resolve({ data: [] as { id: string; name: string }[], error: null }),
+      looseDiamondIds.length > 0
+        ? supabase.from("loose_diamonds").select("id, report_number").in("id", looseDiamondIds)
+        : Promise.resolve({ data: [] as { id: string; report_number: string }[], error: null }),
+      jewelryItemIds.length > 0
+        ? supabase.from("jewelry_inventory").select("id, sku").in("id", jewelryItemIds)
+        : Promise.resolve({ data: [] as { id: string; sku: string }[], error: null }),
+    ])
 
   if (ordersResult.error) throw ordersResult.error
   if (customersResult.error) throw customersResult.error
   if (jobsResult.error) throw jobsResult.error
+  if (inventoryItemsResult.error) throw inventoryItemsResult.error
+  if (looseDiamondsResult.error) throw looseDiamondsResult.error
+  if (jewelryItemsResult.error) throw jewelryItemsResult.error
 
   return {
     orderMap: new Map((ordersResult.data ?? []).map((row) => [row.id, row.order_number])),
     customerMap: new Map((customersResult.data ?? []).map((row) => [row.id, row.full_name])),
     jobMap: new Map((jobsResult.data ?? []).map((row) => [row.id, row.job_number])),
+    inventoryItemMap: new Map((inventoryItemsResult.data ?? []).map((row) => [row.id, row.name])),
+    looseDiamondMap: new Map((looseDiamondsResult.data ?? []).map((row) => [row.id, row.report_number])),
+    jewelryItemMap: new Map((jewelryItemsResult.data ?? []).map((row) => [row.id, row.sku])),
   }
 }
 
 function buildRelatedRecord(
-  row: Pick<RawDocumentRow, "order_id" | "customer_id" | "production_job_id">,
-  maps: { orderMap: Map<string, string>; customerMap: Map<string, string>; jobMap: Map<string, string> }
+  row: Pick<
+    RawDocumentRow,
+    "order_id" | "customer_id" | "production_job_id" | "inventory_item_id" | "loose_diamond_id" | "jewelry_item_id"
+  >,
+  maps: {
+    orderMap: Map<string, string>
+    customerMap: Map<string, string>
+    jobMap: Map<string, string>
+    inventoryItemMap: Map<string, string>
+    looseDiamondMap: Map<string, string>
+    jewelryItemMap: Map<string, string>
+  }
 ): DocumentRelatedRecord | null {
   if (row.order_id) {
     return { type: "order", id: row.order_id, label: maps.orderMap.get(row.order_id) ?? row.order_id }
@@ -93,6 +134,27 @@ function buildRelatedRecord(
       type: "production_job",
       id: row.production_job_id,
       label: maps.jobMap.get(row.production_job_id) ?? row.production_job_id,
+    }
+  }
+  if (row.inventory_item_id) {
+    return {
+      type: "inventory_item",
+      id: row.inventory_item_id,
+      label: maps.inventoryItemMap.get(row.inventory_item_id) ?? row.inventory_item_id,
+    }
+  }
+  if (row.loose_diamond_id) {
+    return {
+      type: "loose_diamond",
+      id: row.loose_diamond_id,
+      label: maps.looseDiamondMap.get(row.loose_diamond_id) ?? row.loose_diamond_id,
+    }
+  }
+  if (row.jewelry_item_id) {
+    return {
+      type: "jewelry_item",
+      id: row.jewelry_item_id,
+      label: maps.jewelryItemMap.get(row.jewelry_item_id) ?? row.jewelry_item_id,
     }
   }
   return null
@@ -152,13 +214,15 @@ export async function getDocuments(
   }
 
   if (filters.relatedType) {
-    const column =
-      filters.relatedType === "order"
-        ? "order_id"
-        : filters.relatedType === "customer"
-          ? "customer_id"
-          : "production_job_id"
-    query = query.not(column, "is", null)
+    const RELATED_TYPE_COLUMN: Record<typeof filters.relatedType, string> = {
+      order: "order_id",
+      customer: "customer_id",
+      production_job: "production_job_id",
+      inventory_item: "inventory_item_id",
+      loose_diamond: "loose_diamond_id",
+      jewelry_item: "jewelry_item_id",
+    }
+    query = query.not(RELATED_TYPE_COLUMN[filters.relatedType], "is", null)
   }
 
   if (filters.folderId) {
@@ -307,6 +371,9 @@ export async function createDocumentRecord(supabase: SupabaseClient, input: Crea
       order_id: input.relatedRecordType === "order" ? input.relatedRecordId : null,
       customer_id: input.relatedRecordType === "customer" ? input.relatedRecordId : null,
       production_job_id: input.relatedRecordType === "production_job" ? input.relatedRecordId : null,
+      inventory_item_id: input.relatedRecordType === "inventory_item" ? input.relatedRecordId : null,
+      loose_diamond_id: input.relatedRecordType === "loose_diamond" ? input.relatedRecordId : null,
+      jewelry_item_id: input.relatedRecordType === "jewelry_item" ? input.relatedRecordId : null,
       folder_id: input.folderId || null,
       uploaded_by: user?.id ?? null,
     })

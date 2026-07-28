@@ -21,16 +21,26 @@ export const DOCUMENT_TYPE_LABELS: Record<DocumentType, string> = {
   other: "Other",
 }
 
-// Only these three have a relation column on `documents` - no polymorphic
-// reference, and no column exists for inventory items, tasks, or
-// employees. Do not add entries here without a schema migration.
-export const RELATED_RECORD_TYPES = ["order", "customer", "production_job"] as const
+// Only these six have a relation column on `documents` - no polymorphic
+// reference, and no column exists for tasks or employees. Do not add
+// entries here without a schema migration.
+export const RELATED_RECORD_TYPES = [
+  "order",
+  "customer",
+  "production_job",
+  "inventory_item",
+  "loose_diamond",
+  "jewelry_item",
+] as const
 export type RelatedRecordType = (typeof RELATED_RECORD_TYPES)[number]
 
 export const RELATED_RECORD_TYPE_LABELS: Record<RelatedRecordType, string> = {
   order: "Order",
   customer: "Customer",
   production_job: "Production Job",
+  inventory_item: "Inventory Item",
+  loose_diamond: "Loose Diamond",
+  jewelry_item: "Jewelry Item",
 }
 
 export const ALLOWED_DOCUMENT_MIME_TYPES = [

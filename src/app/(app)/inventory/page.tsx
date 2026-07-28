@@ -1,54 +1,41 @@
-import { Package } from "lucide-react"
-
 import { PageHeader } from "@/components/shared/page-header"
 import { StatCard } from "@/components/shared/stat-card"
+import { CategoryLandingCard } from "@/components/inventory/category-landing-card"
 import { createClient } from "@/lib/supabase/server"
-import { getInventoryItems, getInventoryStats } from "@/lib/supabase/inventory"
-import { InventoryFilters } from "@/components/inventory/inventory-filters"
-import { InventoryTable } from "@/components/inventory/inventory-table"
-import { INVENTORY_CATEGORIES } from "@/types/inventory"
-import type { InventoryCategory, StockStatus } from "@/types/inventory"
-
-const STOCK_STATUSES: StockStatus[] = ["in_stock", "low_stock", "out_of_stock"]
+import { getInventoryDashboardStats } from "@/lib/supabase/inventory-shared"
+import { INVENTORY_CATEGORY_DEFS } from "@/types/inventory-categories"
 
 function formatCurrency(amount: number) {
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(amount)
 }
 
-interface InventoryPageProps {
-  searchParams: Promise<{ q?: string; category?: string; stockStatus?: string }>
+const COUNT_LABEL: Record<string, (stats: Awaited<ReturnType<typeof getInventoryDashboardStats>>) => string> = {
+  loose_diamonds: (stats) => `${stats.totalStones} Stone${stats.totalStones === 1 ? "" : "s"}`,
+  jewelry: (stats) => `${stats.totalJewelryProducts} Item${stats.totalJewelryProducts === 1 ? "" : "s"}`,
 }
 
-export default async function InventoryPage({ searchParams }: InventoryPageProps) {
-  const { q, category, stockStatus } = await searchParams
+export default async function InventoryLandingPage() {
   const supabase = await createClient()
-
-  const validCategory = INVENTORY_CATEGORIES.includes(category as InventoryCategory)
-    ? (category as InventoryCategory)
-    : undefined
-  const validStockStatus = STOCK_STATUSES.includes(stockStatus as StockStatus)
-    ? (stockStatus as StockStatus)
-    : undefined
-
-  const [items, stats] = await Promise.all([
-    getInventoryItems(supabase, { search: q, category: validCategory, stockStatus: validStockStatus }),
-    getInventoryStats(supabase),
-  ])
+  const stats = await getInventoryDashboardStats(supabase)
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-6">
-      <PageHeader title="Inventory" description="Monitor raw materials, precious elements, and stock levels." />
+      <PageHeader title="Inventory" description="Category-based inventory management for the full jewelry manufacturing lifecycle." />
 
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-        <StatCard label="Total Inventory Items" value={stats.totalItems} icon={Package} />
-        <StatCard label="Total Inventory Value" value={formatCurrency(stats.totalValue)} />
-        <StatCard label="Low Stock Items" value={stats.lowStockCount} />
-        <StatCard label="Out of Stock Items" value={stats.outOfStockCount} />
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
+        <StatCard label="Total Inventory Value" value={formatCurrency(stats.totalInventoryValue)} />
+        <StatCard label="Loose Diamond Value" value={formatCurrency(stats.looseDiamondValue)} />
+        <StatCard label="Jewelry Value" value={formatCurrency(stats.jewelryValue)} />
+        <StatCard label="Low Stock Jewelry" value={stats.lowStockJewelry} />
+        <StatCard label="Loose Stones Available" value={stats.looseStonesAvailable} />
+        <StatCard label="Loose Stones Reserved" value={stats.looseStonesReserved} />
       </div>
 
-      <InventoryFilters />
-
-      <InventoryTable items={items} />
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {INVENTORY_CATEGORY_DEFS.map((category) => (
+          <CategoryLandingCard key={category.id} category={category} countLabel={COUNT_LABEL[category.id]?.(stats)} />
+        ))}
+      </div>
     </div>
   )
 }
