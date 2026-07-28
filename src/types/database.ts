@@ -324,6 +324,69 @@ export type Database = {
           },
         ]
       }
+      employee_daily_activities: {
+        Row: {
+          activity_date: string
+          activity_title: string
+          attendance_id: string | null
+          completed_at: string | null
+          created_at: string
+          description: string | null
+          duration_minutes: number | null
+          employee_id: string
+          id: string
+          notes: string | null
+          started_at: string | null
+          status: Database["public"]["Enums"]["activity_status"]
+          updated_at: string
+        }
+        Insert: {
+          activity_date?: string
+          activity_title: string
+          attendance_id?: string | null
+          completed_at?: string | null
+          created_at?: string
+          description?: string | null
+          duration_minutes?: number | null
+          employee_id: string
+          id?: string
+          notes?: string | null
+          started_at?: string | null
+          status?: Database["public"]["Enums"]["activity_status"]
+          updated_at?: string
+        }
+        Update: {
+          activity_date?: string
+          activity_title?: string
+          attendance_id?: string | null
+          completed_at?: string | null
+          created_at?: string
+          description?: string | null
+          duration_minutes?: number | null
+          employee_id?: string
+          id?: string
+          notes?: string | null
+          started_at?: string | null
+          status?: Database["public"]["Enums"]["activity_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_daily_activities_attendance_id_fkey"
+            columns: ["attendance_id"]
+            isOneToOne: false
+            referencedRelation: "attendance_records"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_daily_activities_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       employees: {
         Row: {
           created_at: string
@@ -1620,6 +1683,7 @@ export type Database = {
         | "attendance_record"
         | "loose_diamond"
         | "jewelry_item"
+      activity_status: "pending" | "in_progress" | "completed"
       attendance_status:
         | "working"
         | "on_break"
@@ -1912,6 +1976,7 @@ export const Constants = {
         "loose_diamond",
         "jewelry_item",
       ],
+      activity_status: ["pending", "in_progress", "completed"],
       attendance_status: [
         "working",
         "on_break",

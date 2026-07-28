@@ -9,6 +9,12 @@ import { AttendanceSummaryCards } from "@/components/attendance/attendance-summa
 import { AttendanceFilters } from "@/components/attendance/attendance-filters"
 import { AttendanceHistoryTable } from "@/components/attendance/attendance-history-table"
 import { AttendanceExportButton } from "@/components/attendance/attendance-export-button"
+import { DailyActivityTracker } from "@/components/attendance/daily-activity-tracker"
+import { ManagerActivityOverview } from "@/components/attendance/manager-activity-overview"
+import { ActivityLogFilters } from "@/components/attendance/activity-log-filters"
+import { ActivityLogTable } from "@/components/attendance/activity-log-table"
+import { ActivityInsightsPanel } from "@/components/attendance/activity-insights-panel"
+import { ActivityExportButton } from "@/components/attendance/activity-export-button"
 import { createClient } from "@/lib/supabase/server"
 import { getProfile } from "@/lib/supabase/profile"
 import {
@@ -19,11 +25,14 @@ import {
   getTodaySessions,
   reconcileAttendance,
 } from "@/lib/supabase/attendance"
+import { getActivityLog, getManagerActivityOverview, getTodayActivities } from "@/lib/supabase/daily-activities"
 import { resolveDateRange } from "@/lib/supabase/reports"
 import { DATE_RANGE_PRESETS } from "@/types/report"
 import type { DateRangePreset } from "@/types/report"
 import { ATTENDANCE_STATUSES } from "@/types/attendance"
 import type { AttendanceStatus } from "@/types/attendance"
+import { ACTIVITY_STATUSES } from "@/types/daily-activity"
+import type { ActivityStatus } from "@/types/daily-activity"
 
 const MANAGER_ROLES = ["admin", "operations_manager", "production_manager"]
 
@@ -34,11 +43,29 @@ interface AttendancePageProps {
     preset?: string
     from?: string
     to?: string
+    activityEmployeeId?: string
+    activityStatus?: string
+    activitySearch?: string
+    activityPreset?: string
+    activityFrom?: string
+    activityTo?: string
   }>
 }
 
 export default async function AttendancePage({ searchParams }: AttendancePageProps) {
-  const { employeeId, status, preset: presetParam, from: fromParam, to: toParam } = await searchParams
+  const {
+    employeeId,
+    status,
+    preset: presetParam,
+    from: fromParam,
+    to: toParam,
+    activityEmployeeId,
+    activityStatus,
+    activitySearch,
+    activityPreset: activityPresetParam,
+    activityFrom: activityFromParam,
+    activityTo: activityToParam,
+  } = await searchParams
 
   const supabase = await createClient()
   const {
@@ -60,6 +87,11 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
   const linkedEmployeeId = await getLinkedEmployeeId(supabase, user.id)
   const hasEmployeeRecord = linkedEmployeeId !== null
   const todaySessions = linkedEmployeeId ? await getTodaySessions(supabase, linkedEmployeeId) : []
+  // "After checking in" - at least one session exists today, regardless of
+  // whether it's still active or already finished.
+  const hasCheckedInToday = todaySessions.length > 0
+  const todayActivities =
+    linkedEmployeeId && hasCheckedInToday ? await getTodayActivities(supabase, linkedEmployeeId) : []
 
   let managerSection: ReactNode = null
 
@@ -70,10 +102,28 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
 
     const filters = { employeeId: employeeId || undefined, status: validStatus, from: range.from, to: range.to }
 
-    const [summary, employees, history] = await Promise.all([
+    const validActivityStatus = ACTIVITY_STATUSES.includes(activityStatus as ActivityStatus)
+      ? (activityStatus as ActivityStatus)
+      : undefined
+    const activityPreset = (
+      DATE_RANGE_PRESETS.includes(activityPresetParam as DateRangePreset) ? activityPresetParam : "7d"
+    ) as DateRangePreset
+    const activityRange = resolveDateRange(activityPreset, activityFromParam, activityToParam)
+
+    const activityFilters = {
+      employeeId: activityEmployeeId || undefined,
+      status: validActivityStatus,
+      search: activitySearch || undefined,
+      from: activityRange.from,
+      to: activityRange.to,
+    }
+
+    const [summary, employees, history, activityOverview, activityLog] = await Promise.all([
       getAttendanceDashboardSummary(supabase),
       getAttendanceEmployeeOptions(supabase),
       getAttendanceHistory(supabase, filters),
+      getManagerActivityOverview(supabase),
+      getActivityLog(supabase, activityFilters),
     ])
 
     managerSection = (
@@ -93,6 +143,23 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
             <AttendanceHistoryTable records={history} />
           </div>
         </SectionCard>
+
+        <div className="flex flex-col gap-3">
+          <h2 className="text-sm font-semibold text-foreground">Employee Activity Overview</h2>
+          <ManagerActivityOverview entries={activityOverview} />
+        </div>
+
+        <SectionCard
+          title="Activity Log"
+          description="Search and review every employee's logged activities."
+          actions={<ActivityExportButton filters={activityFilters} />}
+        >
+          <div className="flex flex-col gap-4">
+            <ActivityLogFilters employees={employees} />
+            <ActivityInsightsPanel activities={activityLog} />
+            <ActivityLogTable activities={activityLog} />
+          </div>
+        </SectionCard>
       </>
     )
   }
@@ -108,6 +175,7 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
         <>
           <AttendanceTimerWidget sessions={todaySessions} />
           <SessionHistoryList sessions={todaySessions} />
+          {hasCheckedInToday && <DailyActivityTracker activities={todayActivities} sessions={todaySessions} />}
         </>
       ) : (
         <SectionCard title="My Attendance">
