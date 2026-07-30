@@ -23,7 +23,11 @@ interface GetOrdersFilters {
   overdue?: boolean
   /** Optional - the Orders list page needs every matching row; widgets that only show a handful (e.g. Reports' "Overdue Orders" card) can bound the query instead of fetching everything and slicing client-side. Only applies to the non-search path (Reports never searches). */
   limit?: number
+  /** Paired with `limit` for the Orders list page's "Load More" pagination - fetches one extra row beyond `limit` so the caller can detect "is there more?" without a separate count query. Only applies to the non-search path. */
+  offset?: number
 }
+
+export const ORDERS_PAGE_SIZE = 25
 
 const ORDER_COLUMNS =
   "id, order_number, status, order_date, due_date, total, currency, created_at, order_items(count), order_stones(count)"
@@ -84,7 +88,12 @@ export async function getOrders(supabase: SupabaseClient, filters: GetOrdersFilt
     query = query.lt("due_date", today).not("status", "in", "(delivered,cancelled)")
   }
 
-  if (filters.limit) {
+  if (filters.limit !== undefined && filters.offset !== undefined) {
+    // .range() is inclusive on both ends, so this fetches limit+1 rows -
+    // the extra row (if present) tells the caller there's another page,
+    // without a separate count query.
+    query = query.range(filters.offset, filters.offset + filters.limit)
+  } else if (filters.limit) {
     query = query.limit(filters.limit)
   }
 

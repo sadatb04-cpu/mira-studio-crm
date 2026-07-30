@@ -102,37 +102,41 @@ export function LooseDiamondFormDrawer({ suppliers, diamond }: LooseDiamondFormD
     if (documents.length === 0) return { failures: 0 }
 
     const supabase = createClient()
-    let failures = 0
 
-    for (const file of documents) {
-      const storagePath = `${crypto.randomUUID()}/${file.name}`
-      const { error: uploadError } = await supabase.storage.from(DOCUMENTS_BUCKET).upload(storagePath, file, {
-        contentType: file.type,
+    // Each file's own upload-then-create-record is a genuine dependency (the
+    // document needs the storage path), but different files are independent
+    // of each other - uploading them concurrently instead of one at a time
+    // turns N sequential round trips into one wait for the slowest.
+    const results = await Promise.all(
+      documents.map(async (file) => {
+        const storagePath = `${crypto.randomUUID()}/${file.name}`
+        const { error: uploadError } = await supabase.storage.from(DOCUMENTS_BUCKET).upload(storagePath, file, {
+          contentType: file.type,
+        })
+
+        if (uploadError) return { failed: true }
+
+        const result = await createDocument({
+          documentType: file.type.startsWith("image/") ? "image" : "igi_certificate",
+          description: `${form.reportNumber} - ${file.name}`,
+          relatedRecordType: "loose_diamond",
+          relatedRecordId: diamondId,
+          fileName: file.name,
+          fileSize: file.size,
+          mimeType: file.type as (typeof ALLOWED_DOCUMENT_MIME_TYPES)[number],
+          storagePath,
+        })
+
+        if (result.error) {
+          await supabase.storage.from(DOCUMENTS_BUCKET).remove([storagePath])
+          return { failed: true }
+        }
+
+        return { failed: false }
       })
+    )
 
-      if (uploadError) {
-        failures += 1
-        continue
-      }
-
-      const result = await createDocument({
-        documentType: file.type.startsWith("image/") ? "image" : "igi_certificate",
-        description: `${form.reportNumber} - ${file.name}`,
-        relatedRecordType: "loose_diamond",
-        relatedRecordId: diamondId,
-        fileName: file.name,
-        fileSize: file.size,
-        mimeType: file.type as (typeof ALLOWED_DOCUMENT_MIME_TYPES)[number],
-        storagePath,
-      })
-
-      if (result.error) {
-        failures += 1
-        await supabase.storage.from(DOCUMENTS_BUCKET).remove([storagePath])
-      }
-    }
-
-    return { failures }
+    return { failures: results.filter((r) => r.failed).length }
   }
 
   function handleSubmit() {

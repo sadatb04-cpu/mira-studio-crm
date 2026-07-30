@@ -1,4 +1,7 @@
+import { Suspense } from "react"
+
 import { SectionCard } from "@/components/shared/section-card"
+import { Skeleton } from "@/components/ui/skeleton"
 import { DashboardHeader } from "@/components/dashboard/dashboard-header"
 import { ExecutiveKpiGrid } from "@/components/dashboard/executive-kpi-grid"
 import { InventoryAlertsCard } from "@/components/dashboard/inventory-alerts-card"
@@ -6,13 +9,8 @@ import { TodaysTasksCard } from "@/components/dashboard/todays-tasks-card"
 import { UpcomingOrdersCard } from "@/components/dashboard/upcoming-orders-card"
 import { RecentCustomersCard } from "@/components/dashboard/recent-customers-card"
 import { QuickActionsCard } from "@/components/dashboard/quick-actions-card"
-import { RevenueChart } from "@/components/reports/revenue-chart"
-import { OrdersChart } from "@/components/reports/orders-chart"
-import { ProductionChart } from "@/components/reports/production-chart"
-import { CustomerChart } from "@/components/reports/customer-chart"
-import { TaskChart } from "@/components/reports/task-chart"
-import { EmployeeChart } from "@/components/reports/employee-chart"
-import { RecentActivity } from "@/components/reports/recent-activity"
+import { RecentActivitySection } from "@/components/dashboard/recent-activity-section"
+import { RevenueChart, OrdersChart, ProductionChart, CustomerChart, TaskChart, EmployeeChart } from "@/components/reports/dynamic-charts"
 import { PermissionGate } from "@/components/providers/permission-gate"
 import { createClient } from "@/lib/supabase/server"
 import { getExecutiveDashboard } from "@/lib/supabase/dashboard"
@@ -75,12 +73,24 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <SectionCard title="Recent Activity">
-          <RecentActivity items={dashboard.recentActivity} />
-        </SectionCard>
+        <Suspense fallback={<RecentActivitySkeleton />}>
+          <RecentActivitySection limit={12} />
+        </Suspense>
 
         <QuickActionsCard />
       </div>
     </div>
+  )
+}
+
+function RecentActivitySkeleton() {
+  return (
+    <SectionCard title="Recent Activity">
+      <div className="flex flex-col gap-3">
+        {Array.from({ length: 4 }).map((_, index) => (
+          <Skeleton key={index} className="h-10 w-full" />
+        ))}
+      </div>
+    </SectionCard>
   )
 }

@@ -20,13 +20,11 @@ export default async function EmployeeDetailPage({ params }: EmployeeDetailPageP
   const { id } = await params
   const supabase = await createClient()
 
-  const employee = await getEmployee(supabase, id)
+  const [employee, user] = await Promise.all([getEmployee(supabase, id), getCachedUser()])
 
   if (!employee) {
     notFound()
   }
-
-  const user = await getCachedUser()
 
   const [assignments, timeline, permissions] = await Promise.all([
     getEmployeeAssignments(supabase, employee.linkedAccount?.userId ?? null),

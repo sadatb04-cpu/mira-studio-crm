@@ -6,7 +6,7 @@ import { StatCard } from "@/components/shared/stat-card"
 import { Button } from "@/components/ui/button"
 import { PermissionGate } from "@/components/providers/permission-gate"
 import { createClient } from "@/lib/supabase/server"
-import { getOrders, getOrderStatusCounts } from "@/lib/supabase/orders"
+import { getOrders, getOrderStatusCounts, ORDERS_PAGE_SIZE } from "@/lib/supabase/orders"
 import { OrdersFilters } from "@/app/(app)/orders/orders-filters"
 import { OrdersTable } from "@/app/(app)/orders/orders-table"
 import { ORDER_STATUSES } from "@/types/order"
@@ -22,10 +22,17 @@ export default async function OrdersPage({ searchParams }: OrdersPageProps) {
 
   const validStatus = ORDER_STATUSES.includes(status as OrderStatus) ? (status as OrderStatus) : undefined
 
-  const [orders, statusCounts] = await Promise.all([
-    getOrders(supabase, { search: q, status: validStatus }),
+  // Search results come back in full (getOrders' search path can't be
+  // range-paginated), so pagination only applies to the unfiltered/status-
+  // filtered view - fetching one extra row is how hasMore is detected
+  // without a separate count query.
+  const [rawOrders, statusCounts] = await Promise.all([
+    getOrders(supabase, q ? { search: q, status: validStatus } : { status: validStatus, limit: ORDERS_PAGE_SIZE, offset: 0 }),
     getOrderStatusCounts(supabase),
   ])
+
+  const hasMore = !q && rawOrders.length > ORDERS_PAGE_SIZE
+  const orders = hasMore ? rawOrders.slice(0, ORDERS_PAGE_SIZE) : rawOrders
 
   const totalOrders = Object.values(statusCounts).reduce((sum, count) => sum + count, 0)
 
@@ -55,7 +62,11 @@ export default async function OrdersPage({ searchParams }: OrdersPageProps) {
 
       <OrdersFilters />
 
-      <OrdersTable orders={orders} />
+      {/* key forces a remount (resetting the table's own accumulated
+          "Load More" state) whenever the filters change - otherwise the
+          client component would keep showing the previous filter's
+          already-loaded rows on top of the newly-filtered first page. */}
+      <OrdersTable key={`${validStatus ?? "all"}-${q ?? ""}`} orders={orders} hasMore={hasMore} status={validStatus} />
     </div>
   )
 }

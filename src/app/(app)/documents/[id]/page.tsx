@@ -17,13 +17,11 @@ export default async function DocumentDetailPage({ params }: DocumentDetailPageP
   const { id } = await params
   const supabase = await createClient()
 
-  const document = await getDocument(supabase, id)
+  const [document, folders] = await Promise.all([getDocument(supabase, id), getFolderOptions(supabase)])
 
   if (!document) {
     notFound()
   }
-
-  const folders = await getFolderOptions(supabase)
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-6">

@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState, useTransition } from "react"
+import { useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
 import { format } from "date-fns"
 import { Coffee, Loader2, Play, Square } from "lucide-react"
@@ -8,8 +8,8 @@ import { Coffee, Loader2, Play, Square } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { SectionCard } from "@/components/shared/section-card"
 import { AttendanceStatusBadge } from "@/components/attendance/attendance-status-badge"
+import { LiveDuration } from "@/components/attendance/live-duration"
 import { endWork, resumeWork, startBreak, startWork } from "@/app/actions/attendance"
-import { formatClock, formatDuration } from "@/types/attendance"
 import type { AttendanceRecord } from "@/types/attendance"
 
 interface AttendanceTimerWidgetProps {
@@ -20,12 +20,6 @@ export function AttendanceTimerWidget({ sessions }: AttendanceTimerWidgetProps) 
   const router = useRouter()
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
-  // Starts null so the first client render matches the server-rendered
-  // output exactly (both show the frozen totals with zero live elapsed
-  // time) - seeding this from Date.now() during render would make the
-  // server and client disagree by however many milliseconds passed
-  // between the two, causing a text hydration mismatch on the live timer.
-  const [now, setNow] = useState<number | null>(null)
 
   // An auto-inserted "absent" row (no check-in ever happened) isn't a real
   // session - exclude it from the count/summary/button-label logic below,
@@ -37,25 +31,12 @@ export function AttendanceTimerWidget({ sessions }: AttendanceTimerWidgetProps) 
   const isOnBreak = latest?.status === "on_break"
   const isLive = isWorking || isOnBreak
 
-  useEffect(() => {
-    if (!isLive) return
-    const interval = setInterval(() => setNow(Date.now()), 1000)
-    return () => clearInterval(interval)
-  }, [isLive])
-
-  const segmentElapsedSeconds =
-    isLive && latest?.currentSegmentStartedAt && now !== null
-      ? Math.max(0, Math.floor((now - new Date(latest.currentSegmentStartedAt).getTime()) / 1000))
-      : 0
-
-  // The prominent "Current Session" clock tracks only this session's own
-  // WORK time - it freezes the instant a break starts and resumes exactly
-  // where it left off, rather than ticking through the break too.
-  const currentSessionSeconds = latest ? latest.totalWorkedSeconds + (isWorking ? segmentElapsedSeconds : 0) : 0
-
+  // Each live figure below ticks independently (see LiveDuration) so the
+  // 1-second update is scoped to that one text node, not this whole card.
+  const currentSegmentStartedAt = latest?.currentSegmentStartedAt ?? null
   const firstCheckIn = realSessions.length > 0 ? realSessions[0].checkIn : null
-  const totalWorkedSeconds = realSessions.reduce((sum, s) => sum + s.totalWorkedSeconds, 0) + (isWorking ? segmentElapsedSeconds : 0)
-  const totalBreakSeconds = realSessions.reduce((sum, s) => sum + s.totalBreakSeconds, 0) + (isOnBreak ? segmentElapsedSeconds : 0)
+  const bankedWorkedSeconds = realSessions.reduce((sum, s) => sum + s.totalWorkedSeconds, 0)
+  const bankedBreakSeconds = realSessions.reduce((sum, s) => sum + s.totalBreakSeconds, 0)
 
   function run(action: () => Promise<{ error?: string }>) {
     setError(null)
@@ -75,7 +56,13 @@ export function AttendanceTimerWidget({ sessions }: AttendanceTimerWidgetProps) 
         {isLive && (
           <div className="flex flex-col items-center gap-1 rounded-2xl border border-border bg-muted/30 py-6">
             <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Current Session</p>
-            <p className="text-5xl font-semibold tabular-nums text-foreground">{formatClock(currentSessionSeconds)}</p>
+            <LiveDuration
+              baseSeconds={latest?.totalWorkedSeconds ?? 0}
+              segmentStartedAt={currentSegmentStartedAt}
+              running={Boolean(isWorking)}
+              display="clock"
+              className="text-5xl font-semibold tabular-nums text-foreground"
+            />
             {isOnBreak && <p className="text-xs font-medium text-muted-foreground">Paused for break</p>}
           </div>
         )}
@@ -93,11 +80,23 @@ export function AttendanceTimerWidget({ sessions }: AttendanceTimerWidgetProps) 
           </div>
           <div>
             <p className="text-xs font-medium text-muted-foreground">Break Time</p>
-            <p className="mt-1 text-sm font-medium tabular-nums text-foreground">{formatDuration(totalBreakSeconds)}</p>
+            <LiveDuration
+              baseSeconds={bankedBreakSeconds}
+              segmentStartedAt={currentSegmentStartedAt}
+              running={Boolean(isOnBreak)}
+              display="duration"
+              className="mt-1 block text-sm font-medium tabular-nums text-foreground"
+            />
           </div>
           <div>
             <p className="text-xs font-medium text-muted-foreground">Worked Time Today</p>
-            <p className="mt-1 text-sm font-medium tabular-nums text-foreground">{formatDuration(totalWorkedSeconds)}</p>
+            <LiveDuration
+              baseSeconds={bankedWorkedSeconds}
+              segmentStartedAt={currentSegmentStartedAt}
+              running={Boolean(isWorking)}
+              display="duration"
+              className="mt-1 block text-sm font-medium tabular-nums text-foreground"
+            />
           </div>
           <div>
             <p className="text-xs font-medium text-muted-foreground">Sessions Today</p>

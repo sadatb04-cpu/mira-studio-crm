@@ -13,13 +13,11 @@ export default async function EditOrderPage({ params }: EditOrderPageProps) {
   const { id } = await params
   const supabase = await createClient()
 
-  const order = await getOrderById(supabase, id)
+  const [order, customers] = await Promise.all([getOrderById(supabase, id), getCustomers(supabase)])
 
   if (!order) {
     notFound()
   }
-
-  const customers = await getCustomers(supabase)
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-6">

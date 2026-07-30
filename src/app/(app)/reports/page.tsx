@@ -1,3 +1,4 @@
+import { Suspense } from "react"
 import Link from "next/link"
 import { Briefcase, ClipboardList, DollarSign, Gem, Package, PackageCheck, ShoppingBag, Users } from "lucide-react"
 
@@ -6,19 +7,22 @@ import { SectionCard } from "@/components/shared/section-card"
 import { EmptyState } from "@/components/shared/empty-state"
 import { StatusBadge } from "@/components/shared/status-badge"
 import type { StatusTone } from "@/components/shared/status-badge"
+import { Skeleton } from "@/components/ui/skeleton"
 import { JewelryStockLevelBadge } from "@/components/jewelry/jewelry-stock-level-badge"
 import { TaskStatusBadge } from "@/components/tasks/task-status-badge"
 import { ReportSummaryCard } from "@/components/reports/report-summary-card"
 import { ReportsFilters } from "@/components/reports/reports-filters"
 import { ExportButton } from "@/components/reports/export-button"
-import { RecentActivity } from "@/components/reports/recent-activity"
-import { RevenueChart } from "@/components/reports/revenue-chart"
-import { OrdersChart } from "@/components/reports/orders-chart"
-import { ProductionChart } from "@/components/reports/production-chart"
-import { InventoryChart } from "@/components/reports/inventory-chart"
-import { CustomerChart } from "@/components/reports/customer-chart"
-import { TaskChart } from "@/components/reports/task-chart"
-import { EmployeeChart } from "@/components/reports/employee-chart"
+import { RecentActivitySection } from "@/components/dashboard/recent-activity-section"
+import {
+  RevenueChart,
+  OrdersChart,
+  ProductionChart,
+  InventoryChart,
+  CustomerChart,
+  TaskChart,
+  EmployeeChart,
+} from "@/components/reports/dynamic-charts"
 import { createClient } from "@/lib/supabase/server"
 import {
   getCustomerGrowth,
@@ -26,7 +30,6 @@ import {
   getEmployeeWorkload,
   getOrdersByStatus,
   getProductionByStatus,
-  getRecentActivity,
   getRevenueTrend,
   getTaskCompletion,
   resolveDateRange,
@@ -80,7 +83,6 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
     customerGrowth,
     taskCompletion,
     employeeWorkload,
-    recentActivity,
     overdueOrders,
     overdueTasks,
     lowStockItems,
@@ -94,7 +96,6 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
     getCustomerGrowth(supabase, range),
     getTaskCompletion(supabase, range),
     getEmployeeWorkload(supabase),
-    getRecentActivity(supabase, 15),
     getOrders(supabase, { overdue: true, limit: 8 }),
     getTasks(supabase, { dueFilter: "overdue", limit: 8 }),
     getLowStockJewelryItems(supabase, 8),
@@ -146,9 +147,9 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
       <EmployeeChart data={employeeWorkload} />
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <SectionCard title="Recent Activity">
-          <RecentActivity items={recentActivity} />
-        </SectionCard>
+        <Suspense fallback={<RecentActivitySkeleton />}>
+          <RecentActivitySection limit={15} />
+        </Suspense>
 
         <SectionCard title="Low Stock Items">
           {lowStockItems.length === 0 ? (
@@ -219,5 +220,17 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
         </SectionCard>
       </div>
     </div>
+  )
+}
+
+function RecentActivitySkeleton() {
+  return (
+    <SectionCard title="Recent Activity">
+      <div className="flex flex-col gap-3">
+        {Array.from({ length: 4 }).map((_, index) => (
+          <Skeleton key={index} className="h-10 w-full" />
+        ))}
+      </div>
+    </SectionCard>
   )
 }

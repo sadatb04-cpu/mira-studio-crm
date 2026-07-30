@@ -1,5 +1,6 @@
 "use client"
 
+import { useState } from "react"
 import { ShoppingBag } from "lucide-react"
 import { format } from "date-fns"
 import Link from "next/link"
@@ -9,7 +10,9 @@ import { SectionCard } from "@/components/shared/section-card"
 import { StatusBadge } from "@/components/shared/status-badge"
 import type { StatusTone } from "@/components/shared/status-badge"
 import { EmptyState } from "@/components/shared/empty-state"
+import { Button } from "@/components/ui/button"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { loadMoreOrders } from "@/app/actions/orders"
 import { ORDER_STATUS_LABELS } from "@/types/order"
 import type { OrderListItem, OrderStatus } from "@/types/order"
 
@@ -36,10 +39,26 @@ function formatDate(value: string) {
 
 interface OrdersTableProps {
   orders: OrderListItem[]
+  /** Whether the initial fetch was truncated - omitted (or false) when a search is active, since search results already come back in full. */
+  hasMore?: boolean
+  status?: OrderStatus
 }
 
-export function OrdersTable({ orders }: OrdersTableProps) {
+export function OrdersTable({ orders: initialOrders, hasMore: initialHasMore = false, status }: OrdersTableProps) {
   const router = useRouter()
+  const [orders, setOrders] = useState(initialOrders)
+  const [hasMore, setHasMore] = useState(initialHasMore)
+  const [isLoading, setIsLoading] = useState(false)
+
+  function handleLoadMore() {
+    setIsLoading(true)
+    void (async () => {
+      const page = await loadMoreOrders({ status }, orders.length)
+      setOrders((current) => [...current, ...page.orders])
+      setHasMore(page.hasMore)
+      setIsLoading(false)
+    })()
+  }
 
   if (orders.length === 0) {
     return (
@@ -99,6 +118,14 @@ export function OrdersTable({ orders }: OrdersTableProps) {
           ))}
         </TableBody>
       </Table>
+
+      {hasMore && (
+        <div className="flex justify-center border-t border-border p-3">
+          <Button type="button" variant="outline" size="sm" loading={isLoading} onClick={handleLoadMore}>
+            Load More
+          </Button>
+        </div>
+      )}
     </SectionCard>
   )
 }

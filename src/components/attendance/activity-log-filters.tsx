@@ -1,5 +1,6 @@
 "use client"
 
+import { useEffect, useRef, useState } from "react"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
 
 import { FilterBar } from "@/components/shared/filter-bar"
@@ -24,10 +25,12 @@ export function ActivityLogFilters({ employees }: ActivityLogFiltersProps) {
 
   const employeeId = searchParams.get("activityEmployeeId") ?? "all"
   const status = searchParams.get("activityStatus") ?? "all"
-  const search = searchParams.get("activitySearch") ?? ""
   const preset = (searchParams.get("activityPreset") as DateRangePreset | null) ?? "7d"
   const from = searchParams.get("activityFrom") ?? ""
   const to = searchParams.get("activityTo") ?? ""
+
+  const [search, setSearch] = useState(searchParams.get("activitySearch") ?? "")
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   function updateParams(updates: Record<string, string | null>) {
     const params = new URLSearchParams(searchParams.toString())
@@ -42,6 +45,19 @@ export function ActivityLogFilters({ employees }: ActivityLogFiltersProps) {
     router.push(query ? `${pathname}?${query}` : pathname, { scroll: false })
   }
 
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+
+    debounceRef.current = setTimeout(() => {
+      updateParams({ activitySearch: search || null })
+    }, 300)
+
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search])
+
   const hasActiveFilters = Boolean(employeeId !== "all" || status !== "all" || search || preset !== "7d")
 
   function clearAll() {
@@ -49,6 +65,7 @@ export function ActivityLogFilters({ employees }: ActivityLogFiltersProps) {
     ;["activityEmployeeId", "activityStatus", "activitySearch", "activityPreset", "activityFrom", "activityTo"].forEach((key) =>
       params.delete(key)
     )
+    setSearch("")
     const query = params.toString()
     router.push(query ? `${pathname}?${query}` : pathname, { scroll: false })
   }
@@ -57,7 +74,7 @@ export function ActivityLogFilters({ employees }: ActivityLogFiltersProps) {
     <FilterBar hasActiveFilters={hasActiveFilters} onClear={clearAll}>
       <Input
         value={search}
-        onChange={(event) => updateParams({ activitySearch: event.target.value || null })}
+        onChange={(event) => setSearch(event.target.value)}
         placeholder="Search activities..."
         className="w-48"
       />

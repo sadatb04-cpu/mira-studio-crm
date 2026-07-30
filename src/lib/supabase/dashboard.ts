@@ -10,11 +10,10 @@ import {
   getEmployeeWorkload,
   getOrdersByStatus,
   getProductionByStatus,
-  getRecentActivity,
   getRevenueTrend,
   getTaskCompletion,
 } from "@/lib/supabase/reports"
-import type { CustomerGrowthPoint, DashboardStats, EmployeeWorkload, OrdersByStatus, ProductionByStatus, ReportDateRange, RevenuePoint, TaskCompletionPoint, ActivityItem } from "@/types/report"
+import type { CustomerGrowthPoint, DashboardStats, EmployeeWorkload, OrdersByStatus, ProductionByStatus, ReportDateRange, RevenuePoint, TaskCompletionPoint } from "@/types/report"
 import type { OrderListItem } from "@/types/order"
 import type { TaskListItem } from "@/types/task"
 import type { CustomerListItem } from "@/types/customer"
@@ -128,10 +127,6 @@ export async function getDashboardEmployeeWorkload(supabase: SupabaseClient): Pr
   return getEmployeeWorkload(supabase)
 }
 
-export async function getDashboardActivity(supabase: SupabaseClient, limit = 12): Promise<ActivityItem[]> {
-  return getRecentActivity(supabase, limit)
-}
-
 export interface ExecutiveDashboardData {
   stats: DashboardStats
   inventoryStats: InventoryDashboardStats
@@ -145,13 +140,18 @@ export interface ExecutiveDashboardData {
   upcomingOrders: OrderListItem[]
   recentCustomers: CustomerListItem[]
   employeeWorkload: EmployeeWorkload[]
-  recentActivity: ActivityItem[]
 }
 
 // The single entry point the dashboard page calls - orchestrates every
 // section's data in one Promise.all so nothing is fetched twice (in
 // particular, getDashboardStats() and getInventoryDashboardStats() are each
 // called exactly once here, not once per KPI card).
+//
+// Recent Activity is deliberately NOT included here - it's the least
+// critical, least above-the-fold section, so the page fetches it
+// separately (see RecentActivitySection, called from its own Suspense
+// boundary) rather than letting one slow activity-label lookup hold up
+// the KPIs/charts/tables that matter more.
 export async function getExecutiveDashboard(
   supabase: SupabaseClient,
   range: ReportDateRange
@@ -169,7 +169,6 @@ export async function getExecutiveDashboard(
     upcomingOrders,
     recentCustomers,
     employeeWorkload,
-    recentActivity,
   ] = await Promise.all([
     getDashboardStats(supabase, range),
     getInventoryDashboardStats(supabase),
@@ -183,7 +182,6 @@ export async function getExecutiveDashboard(
     getDashboardUpcomingOrders(supabase),
     getDashboardCustomers(supabase),
     getDashboardEmployeeWorkload(supabase),
-    getDashboardActivity(supabase),
   ])
 
   return {
@@ -199,6 +197,5 @@ export async function getExecutiveDashboard(
     upcomingOrders,
     recentCustomers,
     employeeWorkload,
-    recentActivity,
   }
 }

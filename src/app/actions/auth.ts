@@ -83,9 +83,10 @@ export async function login(_prevState: AuthFormState, formData: FormData): Prom
     return { error: "Your account is not active. Contact an administrator." }
   }
 
-  await logAuthActivity(supabase, { actor_id: data.user.id, action: "login", description: "Signed in." })
-
-  const permissions = await getCachedUserPermissions(data.user.id)
+  const [, permissions] = await Promise.all([
+    logAuthActivity(supabase, { actor_id: data.user.id, action: "login", description: "Signed in." }),
+    getCachedUserPermissions(data.user.id),
+  ])
   const destination = getFirstAccessibleRoute(permissions, profile.role) ?? "/access-denied"
 
   const cookieStore = await cookies()
