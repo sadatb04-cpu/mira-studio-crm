@@ -1,5 +1,7 @@
+import { cache } from "react"
 import type { SupabaseClient } from "@supabase/supabase-js"
 
+import { createClient, getCachedUser } from "@/lib/supabase/server"
 import {
   NO_MODULE_ACCESS,
   PERMISSION_MODULES,
@@ -68,6 +70,15 @@ export async function getUserPermissions(supabase: SupabaseClient, profileId: st
   return { isAdmin: false, modules, special }
 }
 
+// Per-request memoization, same reasoning as getCachedUser()/getCachedProfile()
+// - keyed on profileId (a primitive), so every requireXPermission check and
+// every page guard in the same request shares one database read instead of
+// each re-running getUserPermissions() from scratch.
+export const getCachedUserPermissions = cache(async (profileId: string): Promise<UserPermissions> => {
+  const supabase = await createClient()
+  return getUserPermissions(supabase, profileId)
+})
+
 export function canAccessModule(permissions: UserPermissions, module: PermissionModule, action: ModuleAction): boolean {
   const modulePermission = permissions.modules[module]
   if (action === "view") return modulePermission.can_view
@@ -84,18 +95,24 @@ export function hasSpecialPermission(permissions: UserPermissions, key: SpecialP
 // session server-side (never trusts a client-supplied id/role) and throws
 // a plain Error if the action isn't permitted - callers surface it as
 // { error: error.message } exactly like every other action in this app.
+//
+// Goes through getCachedUser()/getCachedUserPermissions() rather than the
+// passed-in `supabase` client: auth/RLS are keyed off the request's session
+// cookies, not which client instance asks, so this is behaviorally identical
+// to calling supabase.auth.getUser() directly - it just shares the result
+// with every other permission check in the same request instead of hitting
+// the database again. `supabase` stays in the signature so none of this
+// function's 90+ call sites need to change.
 export async function requireModulePermission(
   supabase: SupabaseClient,
   module: PermissionModule,
   action: ModuleAction
 ): Promise<{ userId: string }> {
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const user = await getCachedUser()
 
   if (!user) throw new Error("You must be signed in.")
 
-  const permissions = await getUserPermissions(supabase, user.id)
+  const permissions = await getCachedUserPermissions(user.id)
   if (!canAccessModule(permissions, module, action)) {
     throw new Error("You don't have permission to perform this action.")
   }
@@ -112,13 +129,11 @@ export async function requireModuleOrSpecialPermission(
   action: ModuleAction,
   specialKey: SpecialPermission
 ): Promise<{ userId: string }> {
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const user = await getCachedUser()
 
   if (!user) throw new Error("You must be signed in.")
 
-  const permissions = await getUserPermissions(supabase, user.id)
+  const permissions = await getCachedUserPermissions(user.id)
   if (!canAccessModule(permissions, module, action) && !hasSpecialPermission(permissions, specialKey)) {
     throw new Error("You don't have permission to perform this action.")
   }
@@ -127,13 +142,11 @@ export async function requireModuleOrSpecialPermission(
 }
 
 export async function requireSpecialPermission(supabase: SupabaseClient, key: SpecialPermission): Promise<{ userId: string }> {
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const user = await getCachedUser()
 
   if (!user) throw new Error("You must be signed in.")
 
-  const permissions = await getUserPermissions(supabase, user.id)
+  const permissions = await getCachedUserPermissions(user.id)
   if (!hasSpecialPermission(permissions, key)) {
     throw new Error("You don't have permission to perform this action.")
   }
@@ -150,13 +163,11 @@ export async function requireAdminOrSpecialPermission(
   supabase: SupabaseClient,
   key: SpecialPermission
 ): Promise<{ id: string; email: string }> {
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const user = await getCachedUser()
 
   if (!user) throw new Error("You must be signed in.")
 
-  const permissions = await getUserPermissions(supabase, user.id)
+  const permissions = await getCachedUserPermissions(user.id)
   if (!permissions.isAdmin && !hasSpecialPermission(permissions, key)) {
     throw new Error("You don't have permission to perform this action.")
   }

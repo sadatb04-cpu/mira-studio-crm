@@ -5,22 +5,20 @@ import { ArrowLeft } from "lucide-react"
 import { PageHeader } from "@/components/shared/page-header"
 import { BrandingLogoCard } from "@/components/settings/branding-logo-card"
 import { BrandingTextCard } from "@/components/settings/branding-text-card"
-import { createClient } from "@/lib/supabase/server"
-import { getProfile } from "@/lib/supabase/profile"
+import { createClient, getCachedUser } from "@/lib/supabase/server"
+import { getCachedProfile } from "@/lib/supabase/profile"
 import { getBrandingSettings } from "@/lib/supabase/branding"
 import { getSettingsBundle } from "@/lib/supabase/settings"
 
 export default async function BrandingSettingsPage() {
   const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const user = await getCachedUser()
 
   if (!user) {
     redirect("/login")
   }
 
-  const profile = await getProfile(supabase, user.id)
+  const profile = await getCachedProfile(user.id)
 
   // Same admin-only gate as the parent /settings page (the `settings`
   // table's RLS restricts writes to admins - a non-admin can't save here).

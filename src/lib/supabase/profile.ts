@@ -1,5 +1,7 @@
+import { cache } from "react"
 import type { SupabaseClient, User } from "@supabase/supabase-js"
 
+import { createClient } from "@/lib/supabase/server"
 import type { Profile } from "@/types/profile"
 
 export async function getProfile(supabase: SupabaseClient, userId: string) {
@@ -12,6 +14,15 @@ export async function getProfile(supabase: SupabaseClient, userId: string) {
   if (error) throw error
   return data as Profile
 }
+
+// Per-request memoization, same reasoning as getCachedUser() in server.ts -
+// keyed on userId (a primitive) rather than a supabase client instance, so
+// every caller in the same request converges on one database read
+// regardless of which client object they happen to be holding.
+export const getCachedProfile = cache(async (userId: string): Promise<Profile> => {
+  const supabase = await createClient()
+  return getProfile(supabase, userId)
+})
 
 export async function ensureProfile(supabase: SupabaseClient, user: User) {
   const { data: existing } = await supabase

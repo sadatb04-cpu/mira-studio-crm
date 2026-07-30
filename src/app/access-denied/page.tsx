@@ -3,24 +3,20 @@ import { ShieldAlert } from "lucide-react"
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { createClient } from "@/lib/supabase/server"
-import { getProfile } from "@/lib/supabase/profile"
-import { getUserPermissions } from "@/lib/supabase/permissions"
+import { getCachedUser } from "@/lib/supabase/server"
+import { getCachedProfile } from "@/lib/supabase/profile"
+import { getCachedUserPermissions } from "@/lib/supabase/permissions"
 import { getFirstAccessibleRoute } from "@/lib/permission-routing"
 import { signOut } from "@/app/actions/auth"
 
 export default async function AccessDeniedPage() {
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const user = await getCachedUser()
 
   if (!user) {
     redirect("/login")
   }
 
-  const profile = await getProfile(supabase, user.id)
-  const permissions = await getUserPermissions(supabase, user.id)
+  const [profile, permissions] = await Promise.all([getCachedProfile(user.id), getCachedUserPermissions(user.id)])
 
   // If something changed since they were sent here (an admin granted
   // access in the meantime), don't leave them stuck on this page.

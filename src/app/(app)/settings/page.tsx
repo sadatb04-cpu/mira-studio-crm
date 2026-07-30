@@ -11,21 +11,19 @@ import { SecuritySettingsCard } from "@/components/settings/security-settings-ca
 import { AppearanceCard } from "@/components/settings/appearance-card"
 import { BackupExportCard } from "@/components/settings/backup-export-card"
 import { AboutCard } from "@/components/settings/about-card"
-import { createClient } from "@/lib/supabase/server"
-import { getProfile } from "@/lib/supabase/profile"
+import { createClient, getCachedUser } from "@/lib/supabase/server"
+import { getCachedProfile } from "@/lib/supabase/profile"
 import { getSettingsBundle } from "@/lib/supabase/settings"
 
 export default async function SettingsPage() {
   const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const user = await getCachedUser()
 
   if (!user) {
     redirect("/login")
   }
 
-  const profile = await getProfile(supabase, user.id)
+  const profile = await getCachedProfile(user.id)
 
   // The settings table's RLS restricts every operation (including SELECT) to
   // the admin role, by design - a non-admin session cannot read these rows,

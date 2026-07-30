@@ -4,21 +4,19 @@ import { ArrowLeft } from "lucide-react"
 
 import { PageHeader } from "@/components/shared/page-header"
 import { UserAccessTable } from "@/components/settings/user-access-table"
-import { createClient } from "@/lib/supabase/server"
+import { createClient, getCachedUser } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
-import { getAllUserPermissions, getUserAccessList, getUserPermissions } from "@/lib/supabase/permissions"
+import { getAllUserPermissions, getCachedUserPermissions, getUserAccessList } from "@/lib/supabase/permissions"
 
 export default async function PermissionsSettingsPage() {
   const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const user = await getCachedUser()
 
   if (!user) {
     redirect("/login")
   }
 
-  const viewerPermissions = await getUserPermissions(supabase, user.id)
+  const viewerPermissions = await getCachedUserPermissions(user.id)
 
   // Admins always qualify; a non-admin can too if explicitly granted the
   // "Manage Permissions" special permission.

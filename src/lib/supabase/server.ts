@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 
@@ -24,3 +25,19 @@ export async function createClient() {
     }
   );
 }
+
+// Per-request memoization: auth.getUser() re-validates the session against
+// Supabase's Auth server on every call, so calling it more than once per
+// request (layout + page guard + every requireXPermission check, etc.) used
+// to mean that many redundant round trips. cache() collapses all of them
+// into one - same pattern as getCachedBranding() in branding.ts. Creates its
+// own client internally rather than accepting one as an argument, since
+// cache() keys on argument identity and every call site otherwise builds a
+// different client instance (createClient() has no cache of its own).
+export const getCachedUser = cache(async () => {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  return user;
+});

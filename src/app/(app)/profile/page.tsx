@@ -6,21 +6,18 @@ import { PageHeader } from "@/components/shared/page-header"
 import { SectionCard } from "@/components/shared/section-card"
 import { StatusBadge } from "@/components/shared/status-badge"
 import { Button } from "@/components/ui/button"
-import { createClient } from "@/lib/supabase/server"
-import { getProfile } from "@/lib/supabase/profile"
+import { getCachedUser } from "@/lib/supabase/server"
+import { getCachedProfile } from "@/lib/supabase/profile"
 import { DEPARTMENT_LABELS, USER_ROLE_LABELS } from "@/types/profile"
 
 export default async function ProfilePage() {
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const user = await getCachedUser()
 
   if (!user) {
     redirect("/login")
   }
 
-  const profile = await getProfile(supabase, user.id)
+  const profile = await getCachedProfile(user.id)
 
   const fields: Array<{ label: string; value: string }> = [
     { label: "Full name", value: profile.full_name },

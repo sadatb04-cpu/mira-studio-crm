@@ -15,8 +15,8 @@ import { ActivityLogFilters } from "@/components/attendance/activity-log-filters
 import { ActivityLogTable } from "@/components/attendance/activity-log-table"
 import { ActivityInsightsPanel } from "@/components/attendance/activity-insights-panel"
 import { ActivityExportButton } from "@/components/attendance/activity-export-button"
-import { createClient } from "@/lib/supabase/server"
-import { getProfile } from "@/lib/supabase/profile"
+import { createClient, getCachedUser } from "@/lib/supabase/server"
+import { getCachedProfile } from "@/lib/supabase/profile"
 import {
   getAttendanceDashboardSummary,
   getAttendanceEmployeeOptions,
@@ -68,15 +68,13 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
   } = await searchParams
 
   const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const user = await getCachedUser()
 
   if (!user) {
     redirect("/login")
   }
 
-  const profile = await getProfile(supabase, user.id)
+  const profile = await getCachedProfile(user.id)
   const isManager = MANAGER_ROLES.includes(profile.role)
 
   // Reconciliation-on-read: guarantees auto-absent/auto-close corrections

@@ -8,9 +8,9 @@ import { EmployeeStatusBadge } from "@/components/employees/employee-status-badg
 import { EmployeeSummaryCard } from "@/components/employees/employee-summary-card"
 import { EmployeeAssignmentCard } from "@/components/employees/employee-assignment-card"
 import { EmployeeTimeline } from "@/components/employees/employee-timeline"
-import { createClient } from "@/lib/supabase/server"
+import { createClient, getCachedUser } from "@/lib/supabase/server"
 import { getEmployee, getEmployeeAssignments, getEmployeeTimeline } from "@/lib/supabase/employees"
-import { getUserPermissions } from "@/lib/supabase/permissions"
+import { getCachedUserPermissions } from "@/lib/supabase/permissions"
 
 interface EmployeeDetailPageProps {
   params: Promise<{ id: string }>
@@ -26,14 +26,12 @@ export default async function EmployeeDetailPage({ params }: EmployeeDetailPageP
     notFound()
   }
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const user = await getCachedUser()
 
   const [assignments, timeline, permissions] = await Promise.all([
     getEmployeeAssignments(supabase, employee.linkedAccount?.userId ?? null),
     getEmployeeTimeline(supabase, id),
-    user ? getUserPermissions(supabase, user.id) : null,
+    user ? getCachedUserPermissions(user.id) : null,
   ])
 
   const canViewTasks = permissions?.modules.tasks.can_view ?? false
