@@ -27,6 +27,15 @@ import type { SupplierOption } from "@/lib/supabase/inventory-shared"
 
 const DOCUMENTS_BUCKET = "documents"
 
+// Mirrors the database's generated column (migration 0021) - selling_price
+// is never submitted from this form, so this is purely a live preview of
+// what the database will compute, not the value actually saved.
+const SELLING_PRICE_MARKUP = 1.15
+
+function formatCurrency(amount: number) {
+  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(amount)
+}
+
 const DEFAULT_FORM: LooseDiamondFormInput = {
   reportNumber: "",
   lab: "",
@@ -41,7 +50,6 @@ const DEFAULT_FORM: LooseDiamondFormInput = {
   growthType: "",
   countryOfOrigin: "",
   costUsd: 0,
-  sellingPrice: 0,
   status: "available",
   supplierId: "",
   notes: "",
@@ -62,7 +70,6 @@ function toFormInput(diamond: LooseDiamondDetail): LooseDiamondFormInput {
     growthType: diamond.growth_type ?? "",
     countryOfOrigin: diamond.country_of_origin ?? "",
     costUsd: diamond.cost_usd,
-    sellingPrice: diamond.selling_price,
     status: diamond.status,
     supplierId: diamond.supplier_id ?? "",
     notes: diamond.notes ?? "",
@@ -360,12 +367,11 @@ export function LooseDiamondFormDrawer({ suppliers, diamond }: LooseDiamondFormD
                 <Label htmlFor="diamond-selling-price">Selling Price</Label>
                 <Input
                   id="diamond-selling-price"
-                  type="number"
-                  min={0}
-                  step="0.01"
-                  value={form.sellingPrice}
-                  onChange={(event) => update("sellingPrice", Number(event.target.value))}
+                  value={formatCurrency(form.costUsd * SELLING_PRICE_MARKUP)}
+                  disabled
+                  readOnly
                 />
+                <p className="text-xs text-muted-foreground">Always 15% over cost - calculated automatically.</p>
               </div>
               {!isEdit && (
                 <div className="flex flex-col gap-1.5">

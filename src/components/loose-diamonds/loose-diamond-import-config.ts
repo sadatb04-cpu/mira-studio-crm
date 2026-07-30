@@ -28,7 +28,6 @@ function toFormInput(parsed: ReturnType<typeof looseDiamondImportRowSchema.parse
     growthType: parsed.growthType,
     countryOfOrigin: parsed.countryOfOrigin,
     costUsd: parsed.costUsd ?? 0,
-    sellingPrice: parsed.sellingPrice ?? 0,
     status: (parsed.status ?? "available") as LooseDiamondStatus,
     notes: parsed.notes,
   }
@@ -60,7 +59,6 @@ export const LOOSE_DIAMOND_IMPORT_CONFIG: ImportWizardConfig<LooseDiamondImportF
       growthType: mapped.growthType,
       countryOfOrigin: mapped.countryOfOrigin,
       costUsd: mapped.costUsd,
-      sellingPrice: mapped.sellingPrice,
       status: mapped.status,
       notes: mapped.notes,
     }

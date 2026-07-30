@@ -59,6 +59,9 @@ export interface LooseDiamondDetail extends LooseDiamondListItem {
   supplierName: string | null
 }
 
+// selling_price is never part of this input - it's a generated column
+// (cost_usd * 1.15), computed by the database and never accepted from the
+// form, an import, or anywhere else. See migration 0021.
 export interface LooseDiamondFormInput {
   reportNumber: string
   lab?: string
@@ -73,7 +76,6 @@ export interface LooseDiamondFormInput {
   growthType?: string
   countryOfOrigin?: string
   costUsd: number
-  sellingPrice: number
   status: LooseDiamondStatus
   supplierId?: string
   notes?: string
@@ -95,6 +97,9 @@ export interface LooseDiamondStats {
 // Bulk import
 // ---------------------------------------------------------------------------
 
+// No sellingPrice target field - it's a generated column (cost_usd * 1.15),
+// so the import wizard never asks the user to map a selling-price column;
+// every imported diamond gets a correct, consistent selling price for free.
 export const LOOSE_DIAMOND_IMPORT_TARGET_FIELDS = [
   "reportNumber",
   "lab",
@@ -109,7 +114,6 @@ export const LOOSE_DIAMOND_IMPORT_TARGET_FIELDS = [
   "growthType",
   "countryOfOrigin",
   "costUsd",
-  "sellingPrice",
   "status",
   "notes",
 ] as const
@@ -129,7 +133,6 @@ export const LOOSE_DIAMOND_IMPORT_FIELD_LABELS: Record<LooseDiamondImportField, 
   growthType: "Growth Type",
   countryOfOrigin: "Country of Origin",
   costUsd: "Cost (USD)",
-  sellingPrice: "Selling Price",
   status: "Status",
   notes: "Notes",
 }
@@ -164,7 +167,6 @@ export const LOOSE_DIAMOND_IMPORT_FIELD_ALIASES: Record<LooseDiamondImportField,
   growthType: ["growth type", "type", "origin type", "natural/lab", "natural or lab"],
   countryOfOrigin: ["country of origin", "origin", "country"],
   costUsd: ["cost usd", "cost", "cost price", "amount usd", "rate", "price usd", "buying price"],
-  sellingPrice: ["selling price", "sale price", "retail price", "price"],
   status: ["status"],
   notes: ["notes", "remarks", "comment", "description"],
 }

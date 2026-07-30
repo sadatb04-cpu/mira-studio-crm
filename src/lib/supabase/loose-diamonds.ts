@@ -134,7 +134,8 @@ export async function createLooseDiamond(
       growth_type: input.growthType || null,
       country_of_origin: input.countryOfOrigin || null,
       cost_usd: input.costUsd,
-      selling_price: input.sellingPrice,
+      // selling_price is a generated column (cost_usd * 1.15) - it's never
+      // written directly, so pricing can never drift from that rule.
       status: input.status,
       supplier_id: input.supplierId || null,
       notes: input.notes || null,
@@ -185,7 +186,8 @@ export async function updateLooseDiamond(
       growth_type: input.growthType || null,
       country_of_origin: input.countryOfOrigin || null,
       cost_usd: input.costUsd,
-      selling_price: input.sellingPrice,
+      // selling_price is a generated column (cost_usd * 1.15) - it's never
+      // written directly, so pricing can never drift from that rule.
       supplier_id: input.supplierId || null,
       notes: input.notes || null,
       // status is intentionally excluded here - status transitions always

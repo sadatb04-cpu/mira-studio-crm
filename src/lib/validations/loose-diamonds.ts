@@ -16,7 +16,6 @@ export const looseDiamondFormSchema = z.object({
   growthType: z.string().trim().max(50).optional(),
   countryOfOrigin: z.string().trim().max(50).optional(),
   costUsd: z.coerce.number().min(0, { error: "Cost cannot be negative." }),
-  sellingPrice: z.coerce.number().min(0, { error: "Selling price cannot be negative." }),
   status: z.enum(LOOSE_DIAMOND_STATUSES, { error: "Select a status." }),
   supplierId: z.string().trim().optional(),
   notes: z.string().trim().max(2000).optional(),
@@ -42,7 +41,6 @@ export const looseDiamondImportRowSchema = z.object({
   growthType: z.string().trim().optional(),
   countryOfOrigin: z.string().trim().optional(),
   costUsd: z.coerce.number({ error: "Cost must be a number." }).min(0).optional(),
-  sellingPrice: z.coerce.number({ error: "Selling Price must be a number." }).min(0).optional(),
   status: z.enum(LOOSE_DIAMOND_STATUSES, { error: "Status must be one of: " + LOOSE_DIAMOND_STATUSES.join(", ") }).optional(),
   notes: z.string().trim().optional(),
 })
