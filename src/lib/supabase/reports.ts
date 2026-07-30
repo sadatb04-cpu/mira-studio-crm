@@ -1,11 +1,10 @@
 import type { SupabaseClient } from "@supabase/supabase-js"
 
-import { getInventoryStats } from "@/lib/supabase/inventory"
+import { getInventoryDashboardStats } from "@/lib/supabase/inventory-shared"
 import { getCustomersDashboardStats } from "@/lib/supabase/customers"
 import { getEmployeeDashboardStats } from "@/lib/supabase/employees"
 import { ORDER_STATUSES } from "@/types/order"
 import { PRODUCTION_JOB_STATUSES } from "@/types/production"
-import { INVENTORY_CATEGORIES } from "@/types/inventory"
 import { TASK_STATUSES } from "@/types/task"
 import type {
   ActivityItem,
@@ -13,7 +12,6 @@ import type {
   DashboardStats,
   DateRangePreset,
   EmployeeWorkload,
-  InventoryByCategory,
   OrdersByStatus,
   ProductionByStatus,
   ReportDateRange,
@@ -91,20 +89,27 @@ export async function getDashboardStats(supabase: SupabaseClient, range: ReportD
     inventoryStats,
     customerStats,
     employeeStats,
-    taskStatusResult,
+    openTasksResult,
   ] = await Promise.all([
     supabase.from("orders").select("total").gte("order_date", range.from).lte("order_date", range.to),
     supabase.from("orders").select("total").gte("order_date", previous.from).lte("order_date", previous.to),
     // Snapshot, not date-ranged - orders has no delivered_at column, so this
     // intentionally reflects current state rather than approximating via
-    // updated_at (which changes on any edit, not just delivery).
-    supabase.from("orders").select("id").eq("status", "delivered"),
-    supabase.from("production_jobs").select("id").gte("created_at", range.from).lte("created_at", range.to),
-    supabase.from("production_jobs").select("id").gte("created_at", previous.from).lte("created_at", previous.to),
-    getInventoryStats(supabase),
+    // updated_at (which changes on any edit, not just delivery). Only the
+    // count is needed, so head:true skips transferring any rows at all.
+    supabase.from("orders").select("*", { count: "exact", head: true }).eq("status", "delivered"),
+    supabase.from("production_jobs").select("*", { count: "exact", head: true }).gte("created_at", range.from).lte("created_at", range.to),
+    supabase
+      .from("production_jobs")
+      .select("*", { count: "exact", head: true })
+      .gte("created_at", previous.from)
+      .lte("created_at", previous.to),
+    getInventoryDashboardStats(supabase),
     getCustomersDashboardStats(supabase),
     getEmployeeDashboardStats(supabase),
-    supabase.from("tasks").select("status"),
+    // Same head:true count pattern - "open" is defined as todo/in_progress/
+    // blocked, filtered server-side rather than fetching every task's status.
+    supabase.from("tasks").select("*", { count: "exact", head: true }).in("status", ["todo", "in_progress", "blocked"]),
   ])
 
   if (revenueCurrentResult.error) throw revenueCurrentResult.error
@@ -112,27 +117,20 @@ export async function getDashboardStats(supabase: SupabaseClient, range: ReportD
   if (deliveredResult.error) throw deliveredResult.error
   if (productionCurrentResult.error) throw productionCurrentResult.error
   if (productionPreviousResult.error) throw productionPreviousResult.error
-  if (taskStatusResult.error) throw taskStatusResult.error
+  if (openTasksResult.error) throw openTasksResult.error
 
   const revenueCurrent = (revenueCurrentResult.data ?? []).reduce((sum, row) => sum + row.total, 0)
   const revenuePrevious = (revenuePreviousResult.data ?? []).reduce((sum, row) => sum + row.total, 0)
 
-  const openTasksCount = (taskStatusResult.data ?? []).filter(
-    (row) => row.status === "todo" || row.status === "in_progress" || row.status === "blocked"
-  ).length
-
   return {
     totalRevenue: buildTrendKpi(revenueCurrent, revenuePrevious),
     ordersCreated: buildTrendKpi(revenueCurrentResult.data?.length ?? 0, revenuePreviousResult.data?.length ?? 0),
-    ordersDelivered: { value: deliveredResult.data?.length ?? 0 },
-    productionJobs: buildTrendKpi(
-      productionCurrentResult.data?.length ?? 0,
-      productionPreviousResult.data?.length ?? 0
-    ),
-    inventoryValue: { value: inventoryStats.totalValue },
+    ordersDelivered: { value: deliveredResult.count ?? 0 },
+    productionJobs: buildTrendKpi(productionCurrentResult.count ?? 0, productionPreviousResult.count ?? 0),
+    inventoryValue: { value: inventoryStats.totalInventoryValue },
     activeCustomers: { value: customerStats.activeCustomers },
     activeEmployees: { value: employeeStats.active },
-    openTasks: { value: openTasksCount },
+    openTasks: { value: openTasksResult.count ?? 0 },
   }
 }
 
@@ -189,23 +187,6 @@ export async function getProductionByStatus(
     status,
     count: rows.filter((row) => row.status === status).length,
   }))
-}
-
-// Snapshot, not date-ranged - current stock composition, not a historical trend.
-export async function getInventoryByCategory(supabase: SupabaseClient): Promise<InventoryByCategory[]> {
-  const { data, error } = await supabase
-    .from("inventory_items")
-    .select("category, quantity_on_hand, unit_cost")
-    .eq("is_active", true)
-
-  if (error) throw error
-
-  const byCategory = new Map<string, number>()
-  for (const row of data ?? []) {
-    byCategory.set(row.category, (byCategory.get(row.category) ?? 0) + row.quantity_on_hand * row.unit_cost)
-  }
-
-  return INVENTORY_CATEGORIES.map((category) => ({ category, value: byCategory.get(category) ?? 0 }))
 }
 
 export async function getCustomerGrowth(

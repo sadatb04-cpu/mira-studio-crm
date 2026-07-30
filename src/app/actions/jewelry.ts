@@ -8,12 +8,13 @@ import { findDuplicatesByKey, recordInventoryImportBatch } from "@/lib/supabase/
 import {
   adjustJewelryStock as adjustJewelryStockQuery,
   bulkImportJewelryItems,
+  consumeJewelryStock as consumeJewelryStockQuery,
   createJewelryItem as createJewelryItemQuery,
   updateJewelryItem as updateJewelryItemQuery,
 } from "@/lib/supabase/jewelry"
 import type { ResolvedJewelryImportRow } from "@/lib/supabase/jewelry"
-import { adjustJewelryStockSchema, jewelryFormSchema } from "@/lib/validations/jewelry"
-import type { AdjustJewelryStockInput, JewelryFormInput } from "@/lib/validations/jewelry"
+import { adjustJewelryStockSchema, consumeJewelryStockSchema, jewelryFormSchema } from "@/lib/validations/jewelry"
+import type { AdjustJewelryStockInput, ConsumeJewelryStockInput, JewelryFormInput } from "@/lib/validations/jewelry"
 import type { ImportDuplicateMatch, ImportRowResult, ImportSourceType, ImportSummary } from "@/types/import"
 
 export interface JewelryActionState {
@@ -74,6 +75,26 @@ export async function adjustJewelryStock(input: AdjustJewelryStockInput): Promis
     return {}
   } catch (error) {
     return { error: error instanceof Error ? error.message : "Unable to adjust stock." }
+  }
+}
+
+export async function consumeJewelryStock(input: ConsumeJewelryStockInput): Promise<JewelryActionState> {
+  const validated = consumeJewelryStockSchema.safeParse(input)
+  if (!validated.success) {
+    return { error: validated.error.issues.map((issue) => issue.message).join(" ") }
+  }
+
+  const supabase = await createClient()
+
+  try {
+    await requireModulePermission(supabase, "inventory", "edit")
+    await consumeJewelryStockQuery(supabase, validated.data)
+    revalidatePath(`/inventory/jewelry/${validated.data.jewelryItemId}`)
+    revalidatePath("/inventory/jewelry")
+    revalidatePath(`/production/${validated.data.productionJobId}`)
+    return {}
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : "Unable to record inventory consumption." }
   }
 }
 

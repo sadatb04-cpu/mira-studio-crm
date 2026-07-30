@@ -1,6 +1,5 @@
 import type { OrderStatus } from "@/types/order"
 import type { ProductionJobStatus } from "@/types/production"
-import type { InventoryCategory } from "@/types/inventory"
 import type { TaskStatus } from "@/types/task"
 
 export const DATE_RANGE_PRESETS = ["today", "7d", "30d", "90d", "year", "12m", "custom"] as const
@@ -62,8 +61,11 @@ export interface ProductionByStatus {
   count: number
 }
 
+// category is now a plain string (jewelry category, or "Loose Diamonds") -
+// the old fixed InventoryCategory enum (Gold/Gemstone/Finding/etc) belonged
+// to the deprecated inventory_items schema.
 export interface InventoryByCategory {
-  category: InventoryCategory
+  category: string
   value: number
 }
 

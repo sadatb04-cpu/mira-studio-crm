@@ -6,7 +6,6 @@ import { Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis
 import { SectionCard } from "@/components/shared/section-card"
 import { EmptyState } from "@/components/shared/empty-state"
 import { Button } from "@/components/ui/button"
-import { INVENTORY_CATEGORY_LABELS } from "@/types/inventory"
 import type { InventoryByCategory } from "@/types/report"
 
 const CHART_COLORS = [
@@ -31,7 +30,7 @@ interface InventoryChartProps {
 }
 
 export function InventoryChart({ data }: InventoryChartProps) {
-  const chartData = data.map((row) => ({ label: INVENTORY_CATEGORY_LABELS[row.category], value: row.value }))
+  const chartData = data.map((row) => ({ label: row.category, value: row.value }))
   const hasData = chartData.some((row) => row.value > 0)
 
   return (

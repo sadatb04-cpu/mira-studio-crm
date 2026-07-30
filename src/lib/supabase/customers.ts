@@ -71,22 +71,31 @@ export async function getCustomers(
 }
 
 export async function getCustomersDashboardStats(supabase: SupabaseClient): Promise<CustomersDashboardStats> {
-  const { data: customers, error } = await supabase.from("customers").select("is_active, created_at")
-  if (error) throw error
-
-  const { data: orders, error: ordersError } = await supabase.from("orders").select("total")
-  if (ordersError) throw ordersError
-
   const thirtyDaysAgo = new Date()
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
 
-  const rows = customers ?? []
+  // Counts use { count: "exact", head: true } - Postgres returns just the
+  // row count, no rows transferred, same pattern already proven in
+  // settings.ts's getDatabaseSummary(). Only the revenue sum still needs
+  // actual row data (a single narrow column, not full rows) since summing
+  // isn't expressible as a count.
+  const [totalResult, activeResult, newResult, ordersResult] = await Promise.all([
+    supabase.from("customers").select("*", { count: "exact", head: true }),
+    supabase.from("customers").select("*", { count: "exact", head: true }).eq("is_active", true),
+    supabase.from("customers").select("*", { count: "exact", head: true }).gte("created_at", thirtyDaysAgo.toISOString()),
+    supabase.from("orders").select("total"),
+  ])
+
+  if (totalResult.error) throw totalResult.error
+  if (activeResult.error) throw activeResult.error
+  if (newResult.error) throw newResult.error
+  if (ordersResult.error) throw ordersResult.error
 
   return {
-    totalCustomers: rows.length,
-    activeCustomers: rows.filter((row) => row.is_active).length,
-    newCustomers30Days: rows.filter((row) => new Date(row.created_at) >= thirtyDaysAgo).length,
-    lifetimeRevenue: (orders ?? []).reduce((sum, order) => sum + order.total, 0),
+    totalCustomers: totalResult.count ?? 0,
+    activeCustomers: activeResult.count ?? 0,
+    newCustomers30Days: newResult.count ?? 0,
+    lifetimeRevenue: (ordersResult.data ?? []).reduce((sum, order) => sum + order.total, 0),
   }
 }
 

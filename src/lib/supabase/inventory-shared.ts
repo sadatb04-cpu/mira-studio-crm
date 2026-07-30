@@ -2,7 +2,9 @@ import type { SupabaseClient } from "@supabase/supabase-js"
 
 import { getLooseDiamondStats } from "@/lib/supabase/loose-diamonds"
 import { getJewelryStats } from "@/lib/supabase/jewelry"
+import { JEWELRY_CATEGORIES } from "@/types/jewelry"
 import type { ImportSourceType, ImportSummary } from "@/types/import"
+import type { InventoryByCategory } from "@/types/report"
 import type { StockMovementDetail, StockMovementReferenceType, StockMovementType } from "@/types/stock-movement"
 
 export interface InventoryDashboardStats {
@@ -33,6 +35,36 @@ export async function getInventoryDashboardStats(supabase: SupabaseClient): Prom
     totalStones: diamondStats.totalStones,
     totalJewelryProducts: jewelryStats.totalProducts,
   }
+}
+
+// Replaces the old reports.ts's getInventoryByCategory() (which queried the
+// deprecated inventory_items table's generic material categories). The new
+// schema only has category concepts within jewelry_inventory (Ring/Necklace/
+// etc) - loose diamonds have no category, so their total value is folded
+// into one "Loose Diamonds" bucket alongside the jewelry categories,
+// preserving the same "value by category" bar chart shape. Only the columns
+// each aggregate needs are selected, not full rows.
+export async function getInventoryValueByCategory(supabase: SupabaseClient): Promise<InventoryByCategory[]> {
+  const [jewelryResult, diamondResult] = await Promise.all([
+    supabase.from("jewelry_inventory").select("category, quantity, cost").eq("is_active", true),
+    supabase.from("loose_diamonds").select("cost_usd").eq("is_active", true),
+  ])
+
+  if (jewelryResult.error) throw jewelryResult.error
+  if (diamondResult.error) throw diamondResult.error
+
+  const valueByCategory = new Map<string, number>()
+  for (const row of jewelryResult.data ?? []) {
+    const category = row.category ?? "Other"
+    valueByCategory.set(category, (valueByCategory.get(category) ?? 0) + Number(row.quantity) * Number(row.cost))
+  }
+
+  const diamondValue = (diamondResult.data ?? []).reduce((sum, row) => sum + Number(row.cost_usd), 0)
+
+  return [
+    ...JEWELRY_CATEGORIES.map((category) => ({ category, value: valueByCategory.get(category) ?? 0 })),
+    { category: "Loose Diamonds", value: diamondValue },
+  ]
 }
 
 export interface SupplierOption {
@@ -112,24 +144,44 @@ export async function recordStockMovement(supabase: SupabaseClient, input: Stock
   if (error) throw error
 }
 
-// Shared read path for both categories' detail-page ledger tables.
+export const STOCK_MOVEMENTS_PAGE_SIZE = 20
+
+export interface StockMovementsPage {
+  movements: StockMovementDetail[]
+  hasMore: boolean
+}
+
+// Shared read path for both categories' detail-page ledger tables. The
+// ledger is append-only and only ever grows, so this is paginated rather
+// than loading an item's entire history on every page view - the caller
+// (StockMovementTable) only requests more once the user clicks "Load More".
+// Fetches one extra row beyond the page size to detect "is there more?"
+// without a separate count query.
 export async function getStockMovements(
   supabase: SupabaseClient,
-  filter: { looseDiamondId?: string; jewelryItemId?: string }
-): Promise<StockMovementDetail[]> {
+  filter: { looseDiamondId?: string; jewelryItemId?: string; offset?: number; limit?: number }
+): Promise<StockMovementsPage> {
+  const offset = filter.offset ?? 0
+  const limit = filter.limit ?? STOCK_MOVEMENTS_PAGE_SIZE
+
   let query = supabase
     .from("inventory_stock_movements")
     .select("id, movement_type, quantity_delta, previous_status, new_status, notes, created_at, creator:profiles(full_name)")
     .order("created_at", { ascending: false })
+    .range(offset, offset + limit)
 
   query = filter.looseDiamondId ? query.eq("loose_diamond_id", filter.looseDiamondId) : query.eq("jewelry_item_id", filter.jewelryItemId)
 
   const { data, error } = await query
   if (error) throw error
 
-  return ((data ?? []) as unknown as Array<Omit<StockMovementDetail, "createdByName"> & { creator: { full_name: string } | null }>).map(
-    ({ creator, ...row }) => ({ ...row, createdByName: creator?.full_name ?? null })
-  )
+  const rows = (data ?? []) as unknown as Array<Omit<StockMovementDetail, "createdByName"> & { creator: { full_name: string } | null }>
+  const hasMore = rows.length > limit
+
+  return {
+    movements: rows.slice(0, limit).map(({ creator, ...row }) => ({ ...row, createdByName: creator?.full_name ?? null })),
+    hasMore,
+  }
 }
 
 // inventory_import_batches is shared across every category via its

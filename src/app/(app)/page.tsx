@@ -51,7 +51,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
     <div className="flex flex-1 flex-col gap-6 p-6">
       <DashboardHeader preset={preset} from={fromParam} to={toParam} />
 
-      <ExecutiveKpiGrid stats={dashboard.stats} inventoryStats={dashboard.inventoryStats} />
+      <ExecutiveKpiGrid stats={dashboard.stats} lowStockJewelryCount={dashboard.inventoryStats.lowStockJewelry} />
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <RevenueChart points={dashboard.revenue} />

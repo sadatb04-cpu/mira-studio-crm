@@ -26,7 +26,7 @@ export default async function LooseDiamondPage({ params }: LooseDiamondPageProps
     notFound()
   }
 
-  const [movements, suppliers] = await Promise.all([
+  const [movementsPage, suppliers] = await Promise.all([
     getStockMovements(supabase, { looseDiamondId: id }),
     getSupplierOptions(supabase),
   ])
@@ -56,7 +56,7 @@ export default async function LooseDiamondPage({ params }: LooseDiamondPageProps
       <LooseDiamondSummaryCard diamond={diamond} />
 
       <SectionCard title="Stock Movement History">
-        <StockMovementTable movements={movements} />
+        <StockMovementTable movements={movementsPage.movements} hasMore={movementsPage.hasMore} looseDiamondId={id} />
       </SectionCard>
     </div>
   )

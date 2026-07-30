@@ -11,7 +11,7 @@ import { InventoryAdjustmentDialog } from "@/components/inventory/inventory-adju
 import { Button } from "@/components/ui/button"
 import { createClient } from "@/lib/supabase/server"
 import { getEmployees, getProductionJob, getProductionTimeline } from "@/lib/supabase/production"
-import { getInventoryItemOptions } from "@/lib/supabase/inventory"
+import { getJewelryItemOptions } from "@/lib/supabase/jewelry"
 
 interface ProductionJobPageProps {
   params: Promise<{ id: string }>
@@ -29,10 +29,10 @@ export default async function ProductionJobPage({ params, searchParams }: Produc
     notFound()
   }
 
-  const [employees, timeline, inventoryItems] = await Promise.all([
+  const [employees, timeline, jewelryItems] = await Promise.all([
     getEmployees(supabase),
     getProductionTimeline(supabase, id),
-    getInventoryItemOptions(supabase),
+    getJewelryItemOptions(supabase),
   ])
 
   const specs = job.order_item.specifications
@@ -74,7 +74,7 @@ export default async function ProductionJobPage({ params, searchParams }: Produc
           canConsumeInventory && (
             <InventoryAdjustmentDialog
               mode="consume"
-              items={inventoryItems}
+              items={jewelryItems}
               productionJobId={job.id}
               trigger={
                 <Button type="button" size="sm" variant="outline">

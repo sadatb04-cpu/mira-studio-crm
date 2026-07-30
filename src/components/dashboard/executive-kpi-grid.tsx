@@ -3,7 +3,6 @@ import { AlertTriangle, Briefcase, ClipboardList, DollarSign, Gem, Package, Shop
 
 import { ReportSummaryCard } from "@/components/reports/report-summary-card"
 import type { DashboardStats } from "@/types/report"
-import type { InventoryStats } from "@/types/inventory"
 
 function formatCurrency(amount: number) {
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(amount)
@@ -13,10 +12,10 @@ const cardLinkClassName = "block rounded-2xl transition-transform hover:-transla
 
 interface ExecutiveKpiGridProps {
   stats: DashboardStats
-  inventoryStats: InventoryStats
+  lowStockJewelryCount: number
 }
 
-export function ExecutiveKpiGrid({ stats, inventoryStats }: ExecutiveKpiGridProps) {
+export function ExecutiveKpiGrid({ stats, lowStockJewelryCount }: ExecutiveKpiGridProps) {
   return (
     <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
       <Link href="/reports" className={cardLinkClassName}>
@@ -48,7 +47,7 @@ export function ExecutiveKpiGrid({ stats, inventoryStats }: ExecutiveKpiGridProp
       <Link href="/inventory" className={cardLinkClassName}>
         <ReportSummaryCard
           label="Low Stock Items"
-          kpi={{ value: inventoryStats.lowStockCount }}
+          kpi={{ value: lowStockJewelryCount }}
           icon={AlertTriangle}
         />
       </Link>

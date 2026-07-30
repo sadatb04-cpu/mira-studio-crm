@@ -21,6 +21,8 @@ interface GetOrdersFilters {
   search?: string
   /** Due date has passed and the order hasn't been delivered or cancelled. */
   overdue?: boolean
+  /** Optional - the Orders list page needs every matching row; widgets that only show a handful (e.g. Reports' "Overdue Orders" card) can bound the query instead of fetching everything and slicing client-side. Only applies to the non-search path (Reports never searches). */
+  limit?: number
 }
 
 const ORDER_COLUMNS =
@@ -82,24 +84,31 @@ export async function getOrders(supabase: SupabaseClient, filters: GetOrdersFilt
     query = query.lt("due_date", today).not("status", "in", "(delivered,cancelled)")
   }
 
+  if (filters.limit) {
+    query = query.limit(filters.limit)
+  }
+
   const { data, error } = await query
   if (error) throw error
 
   return (data ?? []) as unknown as OrderListItem[]
 }
 
+// One head:true count per status, run in parallel, instead of fetching every
+// order's status column and counting in JS - the per-status counts stay
+// O(1) each regardless of how large the orders table grows, unlike a full
+// column scan.
 export async function getOrderStatusCounts(supabase: SupabaseClient): Promise<OrderStatusCounts> {
-  const { data, error } = await supabase.from("orders").select("status")
-  if (error) throw error
+  const results = await Promise.all(
+    ORDER_STATUSES.map((status) => supabase.from("orders").select("*", { count: "exact", head: true }).eq("status", status))
+  )
 
-  const counts = ORDER_STATUSES.reduce((acc, status) => {
-    acc[status] = 0
-    return acc
-  }, {} as OrderStatusCounts)
-
-  for (const row of data ?? []) {
-    counts[row.status as OrderStatus] += 1
-  }
+  const counts = {} as OrderStatusCounts
+  ORDER_STATUSES.forEach((status, index) => {
+    const result = results[index]
+    if (result.error) throw result.error
+    counts[status] = result.count ?? 0
+  })
 
   return counts
 }

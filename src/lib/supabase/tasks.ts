@@ -25,6 +25,8 @@ interface GetTasksFilters {
   priority?: TaskPriority
   assignedTo?: string
   dueFilter?: "due_today" | "overdue"
+  /** Optional - the Tasks list page needs every matching row; widgets that only show a handful (e.g. Reports' "Overdue Tasks" card) can bound the query instead of fetching everything and slicing client-side. */
+  limit?: number
 }
 
 export async function getTasks(supabase: SupabaseClient, filters: GetTasksFilters = {}): Promise<TaskListItem[]> {
@@ -52,6 +54,10 @@ export async function getTasks(supabase: SupabaseClient, filters: GetTasksFilter
     query = query.eq("due_date", today)
   } else if (filters.dueFilter === "overdue") {
     query = query.lt("due_date", today).not("status", "in", "(done,cancelled)")
+  }
+
+  if (filters.limit) {
+    query = query.limit(filters.limit)
   }
 
   const { data, error } = await query

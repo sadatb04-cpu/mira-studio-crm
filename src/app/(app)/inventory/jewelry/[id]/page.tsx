@@ -27,7 +27,7 @@ export default async function JewelryItemPage({ params }: JewelryItemPageProps) 
     notFound()
   }
 
-  const [movements, suppliers] = await Promise.all([
+  const [movementsPage, suppliers] = await Promise.all([
     getStockMovements(supabase, { jewelryItemId: id }),
     getSupplierOptions(supabase),
   ])
@@ -66,7 +66,7 @@ export default async function JewelryItemPage({ params }: JewelryItemPageProps) 
       <JewelrySummaryCard item={item} />
 
       <SectionCard title="Stock Movement History">
-        <StockMovementTable movements={movements} />
+        <StockMovementTable movements={movementsPage.movements} hasMore={movementsPage.hasMore} jewelryItemId={id} />
       </SectionCard>
     </div>
   )

@@ -5,11 +5,14 @@ import { getJewelryStockLevel } from "@/types/jewelry"
 import type { DuplicateResolution, ImportRowResult } from "@/types/import"
 import type {
   AdjustJewelryStockInput,
+  ConsumeJewelryStockInput,
   JewelryDetail,
   JewelryFormInput,
+  JewelryItemOption,
   JewelryListItem,
   JewelryStats,
   JewelryStatus,
+  LowStockJewelryItem,
 } from "@/types/jewelry"
 
 const JEWELRY_LIST_COLUMNS = "id, sku, product_name, category, metal, quantity, reorder_level, cost, selling_price, status, updated_at"
@@ -62,6 +65,56 @@ export async function getJewelryStats(supabase: SupabaseClient): Promise<Jewelry
   }
 
   return { totalProducts: rows.length, totalPieces, totalValue, lowStockCount, outOfStockCount }
+}
+
+// Narrow-column read for the Dashboard/Reports "low stock" widgets - only
+// active rows, only the columns those widgets actually render (no cost/
+// pricing/supplier columns). Stock level is a derived quantity-vs-reorder-
+// level comparison, which PostgREST can't filter on directly (it compares a
+// column to a client value, not to another column), so this fetches active
+// rows and derives in JS - same approach getJewelryStats() already uses,
+// just with a narrower column list and a result limit.
+export async function getLowStockJewelryItems(supabase: SupabaseClient, limit = 8): Promise<LowStockJewelryItem[]> {
+  const { data, error } = await supabase
+    .from("jewelry_inventory")
+    .select("id, sku, product_name, category, quantity, reorder_level")
+    .eq("is_active", true)
+
+  if (error) throw error
+
+  return ((data ?? []) as unknown as Array<{
+    id: string
+    sku: string
+    product_name: string
+    category: string | null
+    quantity: number
+    reorder_level: number
+  }>)
+    .filter((row) => getJewelryStockLevel(row.quantity, row.reorder_level) !== "in_stock")
+    .sort((a, b) => a.quantity - a.reorder_level - (b.quantity - b.reorder_level))
+    .slice(0, limit)
+    .map((row) => ({
+      id: row.id,
+      sku: row.sku,
+      productName: row.product_name,
+      category: row.category,
+      quantity: row.quantity,
+      reorderLevel: row.reorder_level,
+    }))
+}
+
+// Narrow-column read for the Production job material-picker - just enough
+// to label an option, unlike the full jewelry list/detail queries.
+export async function getJewelryItemOptions(supabase: SupabaseClient): Promise<JewelryItemOption[]> {
+  const { data, error } = await supabase
+    .from("jewelry_inventory")
+    .select("id, sku, product_name")
+    .eq("is_active", true)
+    .order("product_name", { ascending: true })
+
+  if (error) throw error
+
+  return (data ?? []).map((row) => ({ id: row.id, sku: row.sku, productName: row.product_name }))
 }
 
 export async function getJewelryItem(supabase: SupabaseClient, id: string): Promise<JewelryDetail | null> {
@@ -185,6 +238,29 @@ export async function adjustJewelryStock(supabase: SupabaseClient, input: Adjust
     entityId: input.jewelryItemId,
     action: "stock_adjusted",
     description: `Stock ${input.direction === "increase" ? "increased" : "decreased"} by ${Math.abs(input.quantity)}.`,
+  })
+}
+
+// Replaces the old inventory.ts's consumeInventory() for the Production
+// module's "Consume Inventory" flow, now that production materials come
+// from jewelry_inventory rather than the deprecated inventory_items table.
+// Always a decrease, always tagged with the production_job reference -
+// unlike adjustJewelryStock(), direction isn't a user choice here.
+export async function consumeJewelryStock(supabase: SupabaseClient, input: ConsumeJewelryStockInput): Promise<void> {
+  await recordStockMovement(supabase, {
+    jewelryItemId: input.jewelryItemId,
+    movementType: "production_use",
+    quantityDelta: -Math.abs(input.quantity),
+    referenceType: "production_job",
+    referenceId: input.productionJobId,
+    notes: input.notes,
+  })
+
+  await logInventoryActivity(supabase, {
+    entityType: "jewelry_item",
+    entityId: input.jewelryItemId,
+    action: "stock_consumed",
+    description: `${Math.abs(input.quantity)} consumed for production job.`,
   })
 }
 

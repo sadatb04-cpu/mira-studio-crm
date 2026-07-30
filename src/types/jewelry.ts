@@ -95,6 +95,35 @@ export interface AdjustJewelryStockInput {
   notes?: string
 }
 
+// Consuming stock during production is always a decrease tied to the job
+// that used it - unlike a general adjustment, direction is implicit and a
+// production_job reference is always recorded.
+export interface ConsumeJewelryStockInput {
+  jewelryItemId: string
+  quantity: number
+  notes?: string
+  productionJobId: string
+}
+
+// Narrow shape for the production job material-picker - just enough to
+// label an option, not the full JewelryListItem.
+export interface JewelryItemOption {
+  id: string
+  sku: string
+  productName: string
+}
+
+// Narrow shape for the Dashboard/Reports low-stock widgets - avoids
+// selecting pricing/supplier columns those widgets never render.
+export interface LowStockJewelryItem {
+  id: string
+  sku: string
+  productName: string
+  category: string | null
+  quantity: number
+  reorderLevel: number
+}
+
 export interface JewelryStats {
   totalProducts: number
   totalPieces: number

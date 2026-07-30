@@ -6,7 +6,7 @@ import { SectionCard } from "@/components/shared/section-card"
 import { EmptyState } from "@/components/shared/empty-state"
 import { StatusBadge } from "@/components/shared/status-badge"
 import type { StatusTone } from "@/components/shared/status-badge"
-import { InventoryStatusBadge } from "@/components/inventory/inventory-status-badge"
+import { JewelryStockLevelBadge } from "@/components/jewelry/jewelry-stock-level-badge"
 import { TaskStatusBadge } from "@/components/tasks/task-status-badge"
 import { ReportSummaryCard } from "@/components/reports/report-summary-card"
 import { ReportsFilters } from "@/components/reports/reports-filters"
@@ -24,7 +24,6 @@ import {
   getCustomerGrowth,
   getDashboardStats,
   getEmployeeWorkload,
-  getInventoryByCategory,
   getOrdersByStatus,
   getProductionByStatus,
   getRecentActivity,
@@ -32,11 +31,11 @@ import {
   getTaskCompletion,
   resolveDateRange,
 } from "@/lib/supabase/reports"
+import { getInventoryValueByCategory } from "@/lib/supabase/inventory-shared"
+import { getLowStockJewelryItems } from "@/lib/supabase/jewelry"
 import { getOrders } from "@/lib/supabase/orders"
 import { getTasks } from "@/lib/supabase/tasks"
-import { getInventoryItems } from "@/lib/supabase/inventory"
 import { getCustomers } from "@/lib/supabase/customers"
-import { getStockStatus } from "@/types/inventory"
 import { DATE_RANGE_PRESETS } from "@/types/report"
 import type { DateRangePreset } from "@/types/report"
 import { ORDER_STATUS_LABELS } from "@/types/order"
@@ -84,27 +83,23 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
     recentActivity,
     overdueOrders,
     overdueTasks,
-    inventoryItems,
+    lowStockItems,
     recentCustomers,
   ] = await Promise.all([
     getDashboardStats(supabase, range),
     getRevenueTrend(supabase, range),
     getOrdersByStatus(supabase, range),
     getProductionByStatus(supabase, range),
-    getInventoryByCategory(supabase),
+    getInventoryValueByCategory(supabase),
     getCustomerGrowth(supabase, range),
     getTaskCompletion(supabase, range),
     getEmployeeWorkload(supabase),
     getRecentActivity(supabase, 15),
-    getOrders(supabase, { overdue: true }),
-    getTasks(supabase, { dueFilter: "overdue" }),
-    getInventoryItems(supabase, {}),
+    getOrders(supabase, { overdue: true, limit: 8 }),
+    getTasks(supabase, { dueFilter: "overdue", limit: 8 }),
+    getLowStockJewelryItems(supabase, 8),
     getCustomers(supabase, {}),
   ])
-
-  const lowStockItems = inventoryItems
-    .filter((item) => getStockStatus(item.quantity_on_hand, item.minimum_stock) !== "in_stock")
-    .slice(0, 8)
 
   const recentCustomersList = recentCustomers.slice(0, 8)
 
@@ -162,10 +157,10 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
             <ul className="flex flex-col gap-2">
               {lowStockItems.map((item) => (
                 <li key={item.id} className="flex items-center justify-between text-sm">
-                  <Link href={`/inventory/${item.id}`} className="text-primary hover:underline">
-                    {item.name}
+                  <Link href={`/inventory/jewelry/${item.id}`} className="text-primary hover:underline">
+                    {item.productName}
                   </Link>
-                  <InventoryStatusBadge quantityOnHand={item.quantity_on_hand} minimumStock={item.minimum_stock} />
+                  <JewelryStockLevelBadge quantity={item.quantity} reorderLevel={item.reorderLevel} />
                 </li>
               ))}
             </ul>

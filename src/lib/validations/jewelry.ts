@@ -53,3 +53,12 @@ export const adjustJewelryStockSchema = z.object({
 })
 
 export type AdjustJewelryStockInput = z.infer<typeof adjustJewelryStockSchema>
+
+export const consumeJewelryStockSchema = z.object({
+  jewelryItemId: z.string().min(1, { error: "Item is required." }),
+  quantity: z.coerce.number().positive({ error: "Quantity must be greater than 0." }),
+  notes: z.string().trim().optional(),
+  productionJobId: z.string().min(1),
+})
+
+export type ConsumeJewelryStockInput = z.infer<typeof consumeJewelryStockSchema>

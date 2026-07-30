@@ -16,16 +16,17 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { adjustInventory, consumeInventory } from "@/app/actions/inventory"
-import type { InventoryItemOption } from "@/types/inventory"
+import { adjustInventory } from "@/app/actions/inventory"
+import { consumeJewelryStock } from "@/app/actions/jewelry"
+import type { JewelryItemOption } from "@/types/jewelry"
 
 interface InventoryAdjustmentDialogProps {
   mode: "adjust" | "consume"
   trigger: React.ReactNode
   /** Required for mode="adjust" - the item is fixed (this page's item). */
   item?: { id: string; name: string; unit: string }
-  /** Required for mode="consume" - the user picks which item was used. */
-  items?: InventoryItemOption[]
+  /** Required for mode="consume" - the user picks which jewelry item was used. */
+  items?: JewelryItemOption[]
   /** Required for mode="consume" - the production job this consumption belongs to. */
   productionJobId?: string
 }
@@ -65,11 +66,11 @@ export function InventoryAdjustmentDialog({
     startTransition(async () => {
       const result =
         mode === "consume"
-          ? await consumeInventory({
-              inventory_item_id: selectedItemId,
+          ? await consumeJewelryStock({
+              jewelryItemId: selectedItemId,
               quantity: Number(quantity),
               notes: notes || undefined,
-              production_job_id: productionJobId ?? "",
+              productionJobId: productionJobId ?? "",
             })
           : await adjustInventory({
               inventory_item_id: item?.id ?? "",
@@ -115,7 +116,7 @@ export function InventoryAdjustmentDialog({
                 <SelectContent>
                   {items.map((option) => (
                     <SelectItem key={option.id} value={option.id}>
-                      {option.name} ({option.sku})
+                      {option.productName} ({option.sku})
                     </SelectItem>
                   ))}
                 </SelectContent>
