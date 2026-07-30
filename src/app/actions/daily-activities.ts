@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache"
 import type { SupabaseClient } from "@supabase/supabase-js"
 
 import { createClient } from "@/lib/supabase/server"
-import { getLinkedEmployeeId } from "@/lib/supabase/attendance"
+import { ensureLinkedEmployeeId } from "@/lib/supabase/attendance"
 import { requireModulePermission, requireSpecialPermission } from "@/lib/supabase/permissions"
 import {
   completeActivity as completeActivityQuery,
@@ -32,7 +32,8 @@ export interface CreateActivityActionState extends ActivityActionState {
 
 // Same "resolve the caller's own linked employee id server-side" pattern
 // as app/actions/attendance.ts's getCurrentEmployeeId - never trusts a
-// client-supplied employee id.
+// client-supplied employee id, and silently self-heals a missing link
+// rather than erroring (see migration 0023).
 async function getCurrentEmployeeId(supabase: SupabaseClient): Promise<string> {
   const {
     data: { user },
@@ -40,10 +41,7 @@ async function getCurrentEmployeeId(supabase: SupabaseClient): Promise<string> {
 
   if (!user) throw new Error("You must be signed in.")
 
-  const employeeId = await getLinkedEmployeeId(supabase, user.id)
-  if (!employeeId) throw new Error("Your account is not linked to an employee record.")
-
-  return employeeId
+  return ensureLinkedEmployeeId(supabase, user.id)
 }
 
 // finishCurrent=true means the caller has already confirmed "Finish

@@ -18,10 +18,10 @@ import { ActivityExportButton } from "@/components/attendance/activity-export-bu
 import { createClient, getCachedUser } from "@/lib/supabase/server"
 import { getCachedProfile } from "@/lib/supabase/profile"
 import {
+  ensureLinkedEmployeeId,
   getAttendanceDashboardSummary,
   getAttendanceEmployeeOptions,
   getAttendanceHistory,
-  getLinkedEmployeeId,
   getTodaySessions,
   reconcileAttendance,
 } from "@/lib/supabase/attendance"
@@ -82,7 +82,18 @@ export default async function AttendancePage({ searchParams }: AttendancePagePro
   // yet (or is unavailable on this project) - see migration 0009.
   await reconcileAttendance(supabase)
 
-  const linkedEmployeeId = await getLinkedEmployeeId(supabase, user.id)
+  // Every active account should have a linked employee record by now (auto-
+  // created on Add User, or backfilled by migration 0023) - this is the
+  // self-healing fallback for any gap, so "You haven't been added as an
+  // employee yet." should never actually render for a valid session. It's
+  // only ever caught here so an unexpected DB error still degrades to that
+  // message instead of a hard 500.
+  let linkedEmployeeId: string | null = null
+  try {
+    linkedEmployeeId = await ensureLinkedEmployeeId(supabase, user.id)
+  } catch {
+    linkedEmployeeId = null
+  }
   const hasEmployeeRecord = linkedEmployeeId !== null
   const todaySessions = linkedEmployeeId ? await getTodaySessions(supabase, linkedEmployeeId) : []
   // "After checking in" - at least one session exists today, regardless of

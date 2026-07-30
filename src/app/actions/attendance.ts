@@ -8,8 +8,8 @@ import { createClient } from "@/lib/supabase/server"
 import { requireSpecialPermission } from "@/lib/supabase/permissions"
 import {
   endWork as endWorkQuery,
+  ensureLinkedEmployeeId,
   exportAttendanceHistoryCsv as exportAttendanceHistoryCsvQuery,
-  getLinkedEmployeeId,
   resumeWork as resumeWorkQuery,
   startBreak as startBreakQuery,
   startWork as startWorkQuery,
@@ -27,6 +27,8 @@ export interface AttendanceActionState {
 // operational table here) is permissive by authentication only, not
 // per-row ownership. attendance_records.employee_id is employees(id), not
 // profiles(id) - see Security Sprint 1.0 for why those are now decoupled.
+// ensureLinkedEmployeeId silently auto-provisions the record if it's
+// somehow still missing (see migration 0023) rather than erroring here.
 async function getCurrentEmployeeId(supabase: SupabaseClient): Promise<string> {
   const {
     data: { user },
@@ -34,10 +36,7 @@ async function getCurrentEmployeeId(supabase: SupabaseClient): Promise<string> {
 
   if (!user) throw new Error("You must be signed in.")
 
-  const employeeId = await getLinkedEmployeeId(supabase, user.id)
-  if (!employeeId) throw new Error("Your account is not linked to an employee record.")
-
-  return employeeId
+  return ensureLinkedEmployeeId(supabase, user.id)
 }
 
 export async function startWork(): Promise<AttendanceActionState> {

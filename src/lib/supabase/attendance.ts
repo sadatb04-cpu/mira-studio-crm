@@ -77,6 +77,49 @@ export async function getLinkedEmployeeId(supabase: SupabaseClient, profileId: s
   return data?.id ?? null
 }
 
+// Self-healing fallback for any account that predates createUserAccount()'s
+// auto-provisioning (migration 0023's backfill should already cover every
+// pre-existing account, but this is what guarantees "You haven't been added
+// as an employee yet." can never actually surface for a valid session,
+// including any gap the backfill missed). Safe for a non-admin's own
+// session: the narrow "Users can create their own employee record" RLS
+// policy only ever allows inserting a row where user_id = auth.uid(), and
+// the unique index on employees.user_id makes a concurrent double-insert
+// (e.g. two tabs loading Attendance at once) fail safely - re-fetched
+// below rather than treated as an error.
+export async function ensureLinkedEmployeeId(supabase: SupabaseClient, profileId: string): Promise<string> {
+  const existing = await getLinkedEmployeeId(supabase, profileId)
+  if (existing) return existing
+
+  const { data: profile, error: profileError } = await supabase
+    .from("profiles")
+    .select("full_name, email, department")
+    .eq("id", profileId)
+    .single()
+  if (profileError) throw profileError
+
+  const { data, error } = await supabase
+    .from("employees")
+    .insert({
+      user_id: profileId,
+      full_name: profile.full_name,
+      email: profile.email,
+      department: profile.department,
+      employment_status: "active",
+      hire_date: todayIso(),
+    })
+    .select("id")
+    .single()
+
+  if (error) {
+    const fallback = await getLinkedEmployeeId(supabase, profileId)
+    if (fallback) return fallback
+    throw error
+  }
+
+  return data.id as string
+}
+
 // Every session row for today, oldest first - the full "Today's Sessions"
 // history. An employee can have any number of these (Start Work -> Finish
 // -> Start New Session -> ...); each is its own independent row.

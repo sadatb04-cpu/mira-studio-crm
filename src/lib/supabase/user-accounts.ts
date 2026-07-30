@@ -59,6 +59,12 @@ export async function getUnlinkedEmployees(supabase: SupabaseClient): Promise<Un
 // again after this call returns. adminClient must come from
 // createAdminClient() and the caller must already have passed
 // requireAdmin()/requireAdminOrSpecialPermission().
+//
+// Employees is the single source of truth for Attendance/HR - every
+// account created here gets exactly one linked employee record, created
+// automatically (or linked to an existing HR-only one, if the admin picked
+// one from "Link Employee"). An admin never has to create a second
+// Employee record by hand just to enable attendance; see migration 0023.
 export async function createUserAccount(
   adminClient: SupabaseClient,
   supabase: SupabaseClient,
@@ -78,6 +84,14 @@ export async function createUserAccount(
 
   const newUserId = createData.user.id
 
+  async function rollbackNewUser() {
+    // Roll back the auth user (and, if it made it that far, the profile
+    // row) so a failure here never leaves an orphaned login with no
+    // matching profile/employee.
+    await supabase.from("profiles").delete().eq("id", newUserId)
+    await adminClient.auth.admin.deleteUser(newUserId)
+  }
+
   const { error: profileError } = await supabase.from("profiles").insert({
     id: newUserId,
     full_name: input.fullName,
@@ -88,15 +102,36 @@ export async function createUserAccount(
   })
 
   if (profileError) {
-    // Roll back the auth user so this doesn't leave an orphaned login
-    // with no matching profile.
     await adminClient.auth.admin.deleteUser(newUserId)
     throw profileError
   }
 
   if (input.employeeId) {
-    const { error: linkError } = await supabase.from("employees").update({ user_id: newUserId }).eq("id", input.employeeId)
-    if (linkError) throw linkError
+    // Admin explicitly linked an existing HR-only employee record - only
+    // the link and employment status are touched; that record's own
+    // name/email/department (entered separately via the Employees module)
+    // are left exactly as they are.
+    const { error: linkError } = await supabase
+      .from("employees")
+      .update({ user_id: newUserId, employment_status: "active" })
+      .eq("id", input.employeeId)
+    if (linkError) {
+      await rollbackNewUser()
+      throw linkError
+    }
+  } else {
+    const { error: employeeError } = await supabase.from("employees").insert({
+      user_id: newUserId,
+      full_name: input.fullName,
+      email: input.email,
+      department: input.department || null,
+      employment_status: "active",
+      hire_date: new Date().toISOString().slice(0, 10),
+    })
+    if (employeeError) {
+      await rollbackNewUser()
+      throw employeeError
+    }
   }
 
   await logActivity(supabase, {
