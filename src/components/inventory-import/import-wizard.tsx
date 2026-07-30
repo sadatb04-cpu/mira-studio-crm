@@ -67,6 +67,12 @@ export interface ImportWizardConfig<TField extends string, TInput extends object
   // whose unique key is an assigned code (SKU) rather than a real-world
   // natural key (a diamond's Report Number) - see loose-diamonds config.
   allowCreateDuplicate: boolean
+  // Defaults to true (Loose Diamonds/Jewelry both rely on this default).
+  // Set false for a category where an existing record must never be
+  // overwritten by an import (Orders) - a duplicate then renders as a plain
+  // "Already Exists" label instead of a resolution dropdown, and every
+  // duplicate row is unconditionally skipped.
+  allowUpdateDuplicate?: boolean
   parseRow: (mapped: Partial<Record<TField, string>>) => { input: TInput | null; errors: string[] }
   buildCandidateKey: (input: TInput) => string
   previewColumns: ImportWizardPreviewColumn<TField, TInput>[]
@@ -507,21 +513,33 @@ export function ImportWizard<TField extends string, TInput extends object>({
                             {row.errors[0]}
                           </span>
                         ) : row.duplicateOf ? (
-                          <Select
-                            value={row.resolution}
-                            onValueChange={(value) => updateResolution(row.rowIndex, value as DuplicateResolution)}
-                          >
-                            <SelectTrigger className="h-8 w-full">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="skip">Skip (matches &quot;{row.duplicateOf.label}&quot;)</SelectItem>
-                              <SelectItem value="update">Update Existing</SelectItem>
-                              {config.allowCreateDuplicate && (
-                                <SelectItem value="create_duplicate">Create Duplicate</SelectItem>
-                              )}
-                            </SelectContent>
-                          </Select>
+                          config.allowUpdateDuplicate === false && !config.allowCreateDuplicate ? (
+                            <span
+                              className="flex items-center gap-1 text-xs text-warning"
+                              title={`Matches "${row.duplicateOf.label}" - this row will be skipped.`}
+                            >
+                              <AlertTriangle className="size-3.5" />
+                              Already Exists
+                            </span>
+                          ) : (
+                            <Select
+                              value={row.resolution}
+                              onValueChange={(value) => updateResolution(row.rowIndex, value as DuplicateResolution)}
+                            >
+                              <SelectTrigger className="h-8 w-full">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="skip">Skip (matches &quot;{row.duplicateOf.label}&quot;)</SelectItem>
+                                {config.allowUpdateDuplicate !== false && (
+                                  <SelectItem value="update">Update Existing</SelectItem>
+                                )}
+                                {config.allowCreateDuplicate && (
+                                  <SelectItem value="create_duplicate">Create Duplicate</SelectItem>
+                                )}
+                              </SelectContent>
+                            </Select>
+                          )
                         ) : (
                           <span className="flex items-center gap-1 text-xs text-success">
                             <Check className="size-3.5" />

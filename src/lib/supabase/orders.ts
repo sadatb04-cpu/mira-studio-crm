@@ -5,13 +5,17 @@ import type {
   CustomerOption,
   OrderDetail,
   OrderFile,
+  OrderImportInput,
   OrderItemSpecifications,
   OrderListItem,
+  OrderPriority,
   OrderStatus,
   OrderStatusCounts,
   OrderStone,
   OrderTimelineEvent,
 } from "@/types/order"
+import { createCustomer as createCustomerQuery } from "@/lib/supabase/customers"
+import type { DuplicateResolution, ImportRowResult } from "@/types/import"
 
 const DOCUMENTS_BUCKET = "documents"
 const SIGNED_URL_EXPIRY_SECONDS = 60 * 10
@@ -250,6 +254,21 @@ interface OrderWriteInput {
   notes: string | null
   product_name: string
   files: OrderFileInput[]
+  // Import-only overrides - the manual Create/Edit Order form never sets
+  // these (it has no fields for them), so they're always undefined on that
+  // path and every default below is unchanged. Bulk Order Import is the only
+  // caller that passes them, via createOrderFromImportRow.
+  order_number?: string
+  status?: OrderStatus
+  priority?: OrderPriority
+  order_date?: string
+  delivery_date?: string
+  sales_person?: string
+  currency?: string
+  total?: number
+  advance_paid?: number
+  specifications?: OrderItemSpecifications
+  stone?: { stone_type: string; shape: string; carat_weight: number }
 }
 
 // Exported for reuse by quotations.ts - quotation activity (create/update/
@@ -319,16 +338,30 @@ export async function markOrderDelivered(supabase: SupabaseClient, orderId: stri
 // unit_price default to placeholders (1 / 0); pricing and stone/spec detail
 // get filled in later by Sales/CAD/Production against this same item row.
 export async function createOrder(supabase: SupabaseClient, input: OrderWriteInput): Promise<string> {
+  const total = input.total ?? 0
+
   const { data: order, error: orderError } = await supabase
     .from("orders")
     .insert({
       customer_id: input.customer_id,
       due_date: input.due_date,
       notes: input.notes,
-      subtotal: 0,
+      subtotal: total,
       tax: 0,
       shipping_cost: 0,
-      total: 0,
+      total,
+      // order_number is only set when the import supplies one - the DB
+      // trigger (set_order_number) assigns the next ORD-###### sequence
+      // value whenever this column is left null, exactly as it does for the
+      // manual Create Order form today.
+      ...(input.order_number ? { order_number: input.order_number } : {}),
+      ...(input.status ? { status: input.status } : {}),
+      ...(input.priority ? { priority: input.priority } : {}),
+      ...(input.order_date ? { order_date: input.order_date } : {}),
+      ...(input.delivery_date ? { delivery_date: input.delivery_date } : {}),
+      ...(input.sales_person ? { sales_person: input.sales_person } : {}),
+      ...(input.currency ? { currency: input.currency } : {}),
+      ...(input.advance_paid !== undefined ? { advance_paid: input.advance_paid } : {}),
     })
     .select("id")
     .single()
@@ -344,11 +377,22 @@ export async function createOrder(supabase: SupabaseClient, input: OrderWriteInp
     const { error: itemError } = await supabase.from("order_items").insert({
       order_id: orderId,
       description: input.product_name,
-      specifications: {},
+      specifications: input.specifications ?? {},
       quantity: 1,
-      unit_price: 0,
+      unit_price: total,
     })
     if (itemError) throw itemError
+
+    if (input.stone) {
+      const { error: stoneError } = await supabase.from("order_stones").insert({
+        order_id: orderId,
+        stone_type: input.stone.stone_type,
+        shape: input.stone.shape,
+        carat_weight: input.stone.carat_weight,
+        mm_size: "",
+      })
+      if (stoneError) throw stoneError
+    }
 
     if (input.files.length > 0) {
       const { error: filesError } = await supabase.from("order_files").insert(
@@ -474,4 +518,129 @@ export async function updateOrder(supabase: SupabaseClient, orderId: string, inp
       description: `Removed ${removedFiles.length} file(s).`,
     })
   }
+}
+
+// ---------------------------------------------------------------------------
+// Bulk import (Order Import wizard)
+// ---------------------------------------------------------------------------
+
+// Matches an imported row's customer against an existing record - by email
+// first (the most reliable identifier), then phone, then an exact name
+// match - and only creates a new customer via the same createCustomer() the
+// manual order form's "quick add" uses when none of those match. Never
+// updates an existing customer's details from an order import; a matched
+// customer is used as-is.
+async function resolveOrCreateCustomer(
+  supabase: SupabaseClient,
+  input: { customerName: string; customerEmail?: string; customerPhone?: string }
+): Promise<string> {
+  const email = input.customerEmail?.trim()
+  const phone = input.customerPhone?.trim()
+  const name = input.customerName.trim()
+
+  if (email) {
+    const { data, error } = await supabase.from("customers").select("id").ilike("email", email).limit(1).maybeSingle()
+    if (error) throw error
+    if (data) return data.id as string
+  }
+
+  if (phone) {
+    const { data, error } = await supabase.from("customers").select("id").eq("phone", phone).limit(1).maybeSingle()
+    if (error) throw error
+    if (data) return data.id as string
+  }
+
+  const { data: byName, error: byNameError } = await supabase
+    .from("customers")
+    .select("id")
+    .ilike("full_name", name)
+    .limit(1)
+    .maybeSingle()
+  if (byNameError) throw byNameError
+  if (byName) return byName.id as string
+
+  return createCustomerQuery(supabase, { full_name: name, email: email ?? "", phone: phone ?? "" })
+}
+
+// Derives the single order_item's required description from whatever
+// jewelry-spec fields the row provided - Product Name isn't one of the
+// import's supported fields (see ORDER_IMPORT_TARGET_FIELDS), so this is the
+// fallback that keeps order_items.description (not null) satisfied.
+function buildImportProductName(input: OrderImportInput): string {
+  const parts = [input.metalPurity, input.metal, input.diamondShape, input.diamondType].filter(
+    (part): part is string => Boolean(part && part.trim())
+  )
+  return parts.length > 0 ? parts.join(" ") : `Order ${input.orderNumber}`
+}
+
+export async function createOrderFromImportRow(supabase: SupabaseClient, input: OrderImportInput): Promise<string> {
+  const customerId = await resolveOrCreateCustomer(supabase, input)
+
+  const specifications: OrderItemSpecifications = {}
+  if (input.metal) specifications.metal = input.metal
+  if (input.metalPurity) specifications.metal_purity = input.metalPurity
+  if (input.ringSize) specifications.ring_size = input.ringSize
+
+  return createOrder(supabase, {
+    customer_id: customerId,
+    due_date: input.dueDate || null,
+    notes: input.notes || null,
+    product_name: buildImportProductName(input),
+    files: [],
+    order_number: input.orderNumber,
+    status: input.status,
+    priority: input.priority,
+    order_date: input.orderDate,
+    delivery_date: input.deliveryDate,
+    sales_person: input.salesPerson,
+    currency: input.currency,
+    total: input.totalAmount,
+    advance_paid: input.advancePaid,
+    specifications,
+    stone:
+      input.diamondType || input.diamondShape || input.diamondCarat
+        ? {
+            stone_type: input.diamondType ?? "other",
+            shape: input.diamondShape ?? "other",
+            carat_weight: input.diamondCarat ?? 0.01,
+          }
+        : undefined,
+  })
+}
+
+export interface ResolvedOrderImportRow {
+  rowIndex: number
+  input: OrderImportInput
+  duplicateId: string | null
+  resolution: DuplicateResolution
+}
+
+// Order Number is a real-world business document number, never safe to
+// silently overwrite - every matched duplicate is skipped unconditionally
+// here regardless of `resolution`, unlike Loose Diamonds/Jewelry (which both
+// support "update"). The wizard's UI is also configured (allowUpdateDuplicate:
+// false in order-import-config.ts) to never offer anything but "skip" for a
+// duplicate, so this is a defense-in-depth backstop, not the only guard.
+export async function bulkImportOrders(supabase: SupabaseClient, rows: ResolvedOrderImportRow[]): Promise<ImportRowResult[]> {
+  const results: ImportRowResult[] = []
+
+  for (const row of rows) {
+    if (row.duplicateId) {
+      results.push({ rowIndex: row.rowIndex, status: "skipped", message: "Already exists" })
+      continue
+    }
+
+    try {
+      const id = await createOrderFromImportRow(supabase, row.input)
+      results.push({ rowIndex: row.rowIndex, status: "created", message: id })
+    } catch (error) {
+      results.push({
+        rowIndex: row.rowIndex,
+        status: "error",
+        message: error instanceof Error ? error.message : "Unable to import this row.",
+      })
+    }
+  }
+
+  return results
 }

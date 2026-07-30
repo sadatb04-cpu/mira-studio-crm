@@ -77,6 +77,18 @@ export interface OrderListItem {
 
 export type OrderStatusCounts = Record<OrderStatus, number>
 
+// Migration 0022 - orders-level priority (independent of production_priority/
+// task_priority, which apply to production_jobs/tasks respectively).
+export const ORDER_PRIORITIES = ["low", "normal", "high", "urgent"] as const
+export type OrderPriority = (typeof ORDER_PRIORITIES)[number]
+
+export const ORDER_PRIORITY_LABELS: Record<OrderPriority, string> = {
+  low: "Low",
+  normal: "Normal",
+  high: "High",
+  urgent: "Urgent",
+}
+
 // Stone type/shape back the order_stones table (Sprint 4.1.1). The order
 // creation/edit form no longer collects them directly (Sprint "Simplify
 // Order Creation") - order_stones is populated later by Sales/CAD/Production
@@ -261,4 +273,138 @@ export interface OrderDetail {
   order_items: OrderItemDetail[]
   stones: OrderStone[]
   files: OrderFile[]
+}
+
+// ---------------------------------------------------------------------------
+// Bulk import
+// ---------------------------------------------------------------------------
+
+// No balanceDue target field - it's a generated column (total - advance_paid,
+// migration 0022), the same pattern as Loose Diamonds' selling_price (see
+// types/loose-diamond.ts): the import wizard never asks for a raw
+// balance-due value, so it can never disagree with total/advance_paid.
+export const ORDER_IMPORT_TARGET_FIELDS = [
+  "orderNumber",
+  "customerName",
+  "customerEmail",
+  "customerPhone",
+  "status",
+  "priority",
+  "orderDate",
+  "dueDate",
+  "deliveryDate",
+  "salesPerson",
+  "metal",
+  "metalPurity",
+  "diamondType",
+  "diamondShape",
+  "diamondCarat",
+  "ringSize",
+  "totalAmount",
+  "advancePaid",
+  "currency",
+  "notes",
+] as const
+export type OrderImportField = (typeof ORDER_IMPORT_TARGET_FIELDS)[number]
+
+export const ORDER_IMPORT_FIELD_LABELS: Record<OrderImportField, string> = {
+  orderNumber: "Order Number",
+  customerName: "Customer Name",
+  customerEmail: "Customer Email",
+  customerPhone: "Customer Phone",
+  status: "Status",
+  priority: "Priority",
+  orderDate: "Order Date",
+  dueDate: "Due Date",
+  deliveryDate: "Delivery Date",
+  salesPerson: "Sales Person",
+  metal: "Metal",
+  metalPurity: "Metal Purity",
+  diamondType: "Diamond Type",
+  diamondShape: "Diamond Shape",
+  diamondCarat: "Diamond Carat",
+  ringSize: "Ring Size",
+  totalAmount: "Total Amount",
+  advancePaid: "Advance Paid",
+  currency: "Currency",
+  notes: "Notes",
+}
+
+// Order Number and Customer Name are the two fields the brief requires every
+// row to have (see order-import-config.ts's parseRow) - everything else is
+// optional and either falls back to a sensible default or is simply left
+// blank.
+export const ORDER_IMPORT_REQUIRED_FIELDS: OrderImportField[] = ["orderNumber", "customerName"]
+
+// Header names the auto-mapper recognizes (lowercased, punctuation-
+// insensitive) - see lib/import/column-mapping.ts.
+export const ORDER_IMPORT_FIELD_ALIASES: Record<OrderImportField, string[]> = {
+  orderNumber: ["order number", "order no", "order #", "order id"],
+  customerName: ["customer name", "customer", "client name", "client"],
+  customerEmail: ["customer email", "email", "client email"],
+  customerPhone: ["customer phone", "phone", "phone number", "client phone", "mobile"],
+  status: ["status", "order status"],
+  priority: ["priority"],
+  orderDate: ["order date", "date"],
+  dueDate: ["due date", "deadline"],
+  deliveryDate: ["delivery date", "delivered date", "date delivered"],
+  salesPerson: ["sales person", "salesperson", "sales rep", "sold by"],
+  metal: ["metal"],
+  metalPurity: ["metal purity", "purity", "karat", "carat gold"],
+  diamondType: ["diamond type", "stone type"],
+  diamondShape: ["diamond shape", "stone shape", "shape"],
+  diamondCarat: ["diamond carat", "carat", "carat weight", "stone carat"],
+  ringSize: ["ring size"],
+  totalAmount: ["total amount", "total", "order total", "amount"],
+  advancePaid: ["advance paid", "advance", "deposit", "amount paid"],
+  currency: ["currency"],
+  notes: ["notes", "remarks", "comment", "description"],
+}
+
+// Whitelist for the "Invalid currency values" reject rule - deliberately a
+// fixed, small set (matching orders.currency's free-text-but-ISO-4217-in-
+// practice usage everywhere else in the app) rather than the full ISO-4217
+// list, so a typo'd currency reliably gets rejected instead of silently
+// accepted as some obscure code.
+export const ORDER_IMPORT_ALLOWED_CURRENCIES = [
+  "USD",
+  "EUR",
+  "GBP",
+  "AED",
+  "INR",
+  "CAD",
+  "AUD",
+  "SGD",
+  "HKD",
+  "CHF",
+  "JPY",
+  "SAR",
+  "QAR",
+  "BDT",
+] as const
+
+// The shape parseRow (order-import-config.ts) hands the shared import
+// engine - already normalized/typed, unlike the raw strings in
+// orderImportRowSchema.
+export interface OrderImportInput {
+  orderNumber: string
+  customerName: string
+  customerEmail?: string
+  customerPhone?: string
+  status: OrderStatus
+  priority: OrderPriority
+  orderDate?: string
+  dueDate?: string
+  deliveryDate?: string
+  salesPerson?: string
+  metal?: string
+  metalPurity?: string
+  diamondType?: StoneType
+  diamondShape?: StoneShape
+  diamondCarat?: number
+  ringSize?: string
+  totalAmount: number
+  advancePaid: number
+  currency: string
+  notes?: string
 }

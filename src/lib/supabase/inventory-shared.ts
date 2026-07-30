@@ -85,10 +85,14 @@ export async function getSupplierOptions(supabase: SupabaseClient): Promise<Supp
 // import values - a case mismatch between a spreadsheet's Report Number
 // and what's stored would otherwise silently miss a real duplicate.
 // Returns lowercased-key -> row id.
+//
+// "orders"/"order_number" is Orders' Bulk Import reusing this despite the
+// module being named for inventory - the lookup itself has never been
+// category-specific, only the caller's table/column choice is.
 export async function findDuplicatesByKey(
   supabase: SupabaseClient,
-  table: "loose_diamonds" | "jewelry_inventory",
-  keyColumn: "report_number" | "sku",
+  table: "loose_diamonds" | "jewelry_inventory" | "orders",
+  keyColumn: "report_number" | "sku" | "order_number",
   values: string[]
 ): Promise<Map<string, string>> {
   const wanted = new Set(values.filter(Boolean).map((value) => value.toLowerCase()))

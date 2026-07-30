@@ -1,10 +1,8 @@
-import { Plus, ShoppingBag } from "lucide-react"
-import Link from "next/link"
+import { ShoppingBag } from "lucide-react"
 
 import { PageHeader } from "@/components/shared/page-header"
 import { StatCard } from "@/components/shared/stat-card"
-import { Button } from "@/components/ui/button"
-import { PermissionGate } from "@/components/providers/permission-gate"
+import { OrderActionButtons } from "@/components/orders/order-action-buttons"
 import { createClient } from "@/lib/supabase/server"
 import { getOrders, getOrderStatusCounts, ORDERS_PAGE_SIZE } from "@/lib/supabase/orders"
 import { OrdersFilters } from "@/app/(app)/orders/orders-filters"
@@ -41,16 +39,7 @@ export default async function OrdersPage({ searchParams }: OrdersPageProps) {
       <PageHeader
         title="Orders"
         description="Manage orders, bespoke commissions, and transactions."
-        actions={
-          <PermissionGate module="orders" action="create">
-            <Button asChild size="sm">
-              <Link href="/orders/new">
-                <Plus className="size-3.5" data-icon="inline-start" />
-                New Order
-              </Link>
-            </Button>
-          </PermissionGate>
-        }
+        actions={<OrderActionButtons />}
       />
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
