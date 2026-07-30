@@ -40,6 +40,16 @@ export interface CreateActivityInput {
   description?: string
 }
 
+// Returned instead of creating anything when the employee already has an
+// in-progress activity - the client shows a modal offering to finish the
+// current one and start the new one, or cancel. No pause/resume: only one
+// activity can ever be running at a time.
+export interface ActivityConflict {
+  activityId: string
+  activityTitle: string
+  startedAt: string
+}
+
 export interface UpdateActivityInput {
   activityTitle?: string
   description?: string

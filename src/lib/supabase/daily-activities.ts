@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js"
 
 import type {
+  ActivityConflict,
   ActivityLogFilters,
   ActivityStatus,
   CreateActivityInput,
@@ -119,12 +120,47 @@ export async function getTodayActivities(supabase: SupabaseClient, employeeId: s
   return rows.map((row) => toActivity(row, employeeName))
 }
 
+export type CreateActivityResult = { id: string; conflict?: undefined } | { id?: undefined; conflict: ActivityConflict }
+
+// No separate "Start" step: creating an activity immediately puts it
+// in_progress with started_at = now(). Since only one activity can be
+// running at a time (enforced below AND by the DB's partial unique index
+// as a race-proof backstop), a create attempt while one is already running
+// does NOT create anything - it returns `conflict` describing the current
+// activity so the caller can offer "Finish current & start new" or
+// "Cancel". Pass `finishCurrent: true` to actually do that: the current
+// activity is completed first, then the new one is created and started.
 export async function createActivity(
   supabase: SupabaseClient,
   employeeId: string,
-  input: CreateActivityInput
-): Promise<string> {
+  input: CreateActivityInput,
+  options: { finishCurrent?: boolean } = {}
+): Promise<CreateActivityResult> {
+  const { data: current, error: currentError } = await supabase
+    .from("employee_daily_activities")
+    .select("id, activity_title, started_at")
+    .eq("employee_id", employeeId)
+    .eq("status", "in_progress")
+    .maybeSingle()
+
+  if (currentError) throw currentError
+
+  if (current && !options.finishCurrent) {
+    return {
+      conflict: {
+        activityId: current.id as string,
+        activityTitle: current.activity_title as string,
+        startedAt: current.started_at as string,
+      },
+    }
+  }
+
+  if (current && options.finishCurrent) {
+    await completeActivity(supabase, employeeId, current.id as string)
+  }
+
   const attendanceId = await getLatestAttendanceId(supabase, employeeId)
+  const startedAt = new Date().toISOString()
 
   const { data, error } = await supabase
     .from("employee_daily_activities")
@@ -133,16 +169,41 @@ export async function createActivity(
       attendance_id: attendanceId,
       activity_title: input.activityTitle,
       description: input.description || null,
-      status: "pending",
+      status: "in_progress",
+      started_at: startedAt,
       activity_date: todayIso(),
     })
     .select("id")
     .single()
 
-  if (error) throw error
+  if (error) {
+    // Race backstop: two rapid submissions could both pass the check above
+    // before either insert lands. The partial unique index rejects the
+    // second with a unique-violation - surface it as the same conflict
+    // shape rather than a raw DB error.
+    if (error.code === "23505") {
+      const { data: nowRunning } = await supabase
+        .from("employee_daily_activities")
+        .select("id, activity_title, started_at")
+        .eq("employee_id", employeeId)
+        .eq("status", "in_progress")
+        .maybeSingle()
 
-  await logActivityEvent(supabase, { entity_id: data.id as string, action: "created", description: `Logged "${input.activityTitle}".` })
-  return data.id as string
+      if (nowRunning) {
+        return {
+          conflict: {
+            activityId: nowRunning.id as string,
+            activityTitle: nowRunning.activity_title as string,
+            startedAt: nowRunning.started_at as string,
+          },
+        }
+      }
+    }
+    throw error
+  }
+
+  await logActivityEvent(supabase, { entity_id: data.id as string, action: "created", description: `Started "${input.activityTitle}".` })
+  return { id: data.id as string }
 }
 
 // Rule: an employee cannot start another activity while one is already In

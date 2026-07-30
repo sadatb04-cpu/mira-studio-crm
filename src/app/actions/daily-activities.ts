@@ -19,10 +19,15 @@ import {
 } from "@/lib/supabase/daily-activities"
 import { createActivitySchema, updateActivitySchema } from "@/lib/validations/daily-activity"
 import type { CreateActivityInput, UpdateActivityInput } from "@/lib/validations/daily-activity"
-import type { ActivityLogFilters } from "@/types/daily-activity"
+import type { ActivityConflict, ActivityLogFilters } from "@/types/daily-activity"
 
 export interface ActivityActionState {
   error?: string
+}
+
+export interface CreateActivityActionState extends ActivityActionState {
+  id?: string
+  conflict?: ActivityConflict
 }
 
 // Same "resolve the caller's own linked employee id server-side" pattern
@@ -41,7 +46,16 @@ async function getCurrentEmployeeId(supabase: SupabaseClient): Promise<string> {
   return employeeId
 }
 
-export async function createActivity(input: CreateActivityInput): Promise<ActivityActionState> {
+// finishCurrent=true means the caller has already confirmed "Finish
+// Current & Start New" - the in-progress activity (if still running) is
+// completed first, then the new one is created and started immediately.
+// Without it, a create attempt while one is already running returns
+// `conflict` instead of creating anything, so the client can show the
+// confirm/cancel modal.
+export async function createActivity(
+  input: CreateActivityInput,
+  finishCurrent = false
+): Promise<CreateActivityActionState> {
   const validated = createActivitySchema.safeParse(input)
   if (!validated.success) {
     return { error: validated.error.issues.map((issue) => issue.message).join(" ") }
@@ -51,13 +65,17 @@ export async function createActivity(input: CreateActivityInput): Promise<Activi
 
   try {
     const employeeId = await getCurrentEmployeeId(supabase)
-    await createActivityQuery(supabase, employeeId, validated.data)
+    const result = await createActivityQuery(supabase, employeeId, validated.data, { finishCurrent })
+
+    if (result.conflict) {
+      return { conflict: result.conflict }
+    }
+
+    revalidatePath("/attendance")
+    return { id: result.id }
   } catch (error) {
     return { error: error instanceof Error ? error.message : "Unable to log this activity." }
   }
-
-  revalidatePath("/attendance")
-  return {}
 }
 
 export async function startActivity(activityId: string): Promise<ActivityActionState> {
