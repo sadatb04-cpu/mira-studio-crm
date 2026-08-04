@@ -1,6 +1,6 @@
 import { Suspense } from "react"
 import Link from "next/link"
-import { Briefcase, ClipboardList, DollarSign, Gem, Package, PackageCheck, ShoppingBag, Users } from "lucide-react"
+import { Briefcase, ClipboardList, DollarSign, Gem, Package, PackageCheck, Receipt, ShoppingBag, TrendingUp, Users } from "lucide-react"
 
 import { PageHeader } from "@/components/shared/page-header"
 import { SectionCard } from "@/components/shared/section-card"
@@ -119,6 +119,18 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
           label="Total Revenue"
           kpi={stats.totalRevenue}
           icon={DollarSign}
+          formatValue={formatCurrency}
+        />
+        <ReportSummaryCard
+          label="Total COGS"
+          kpi={stats.totalCOGS}
+          icon={Receipt}
+          formatValue={formatCurrency}
+        />
+        <ReportSummaryCard
+          label="Gross Profit"
+          kpi={stats.grossProfit}
+          icon={TrendingUp}
           formatValue={formatCurrency}
         />
         <ReportSummaryCard label="Orders Created" kpi={stats.ordersCreated} icon={ShoppingBag} />

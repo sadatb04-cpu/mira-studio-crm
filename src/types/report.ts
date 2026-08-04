@@ -36,7 +36,12 @@ export interface SnapshotKpi {
 }
 
 export interface DashboardStats {
+  /** SUM(selling_price) from Finance -> Sellers invoices in range - see finance-sellers.ts's getSellerRevenueStats(). */
   totalRevenue: TrendKpi
+  /** SUM(manufacturing_price) from the same Seller invoices. */
+  totalCOGS: TrendKpi
+  /** SUM(profit) from the same Seller invoices - profit is a DB-generated column (selling_price - manufacturing_price), never re-derived here. */
+  grossProfit: TrendKpi
   ordersCreated: TrendKpi
   ordersDelivered: SnapshotKpi
   productionJobs: TrendKpi

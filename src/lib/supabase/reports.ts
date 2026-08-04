@@ -3,6 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js"
 import { getInventoryDashboardStats } from "@/lib/supabase/inventory-shared"
 import { getCustomersDashboardStats } from "@/lib/supabase/customers"
 import { getEmployeeDashboardStats } from "@/lib/supabase/employees"
+import { getSellerRevenueStats, getSellerRevenueTrend } from "@/lib/supabase/finance-sellers"
 import { ORDER_STATUSES } from "@/types/order"
 import { PRODUCTION_JOB_STATUSES } from "@/types/production"
 import { TASK_STATUSES } from "@/types/task"
@@ -81,8 +82,10 @@ export async function getDashboardStats(supabase: SupabaseClient, range: ReportD
   const previous = getPreviousRange(range)
 
   const [
-    revenueCurrentResult,
-    revenuePreviousResult,
+    revenueCurrent,
+    revenuePrevious,
+    ordersCreatedCurrentResult,
+    ordersCreatedPreviousResult,
     deliveredResult,
     productionCurrentResult,
     productionPreviousResult,
@@ -91,8 +94,16 @@ export async function getDashboardStats(supabase: SupabaseClient, range: ReportD
     employeeStats,
     openTasksResult,
   ] = await Promise.all([
-    supabase.from("orders").select("total").gte("order_date", range.from).lte("order_date", range.to),
-    supabase.from("orders").select("total").gte("order_date", previous.from).lte("order_date", previous.to),
+    // Revenue/COGS/Gross Profit come from Finance -> Sellers, not
+    // orders.total (orders carries no reliable price data, and this app
+    // deliberately doesn't require duplicating pricing into Orders just to
+    // feed the Dashboard) - see finance-sellers.ts's getSellerRevenueStats().
+    getSellerRevenueStats(supabase, range),
+    getSellerRevenueStats(supabase, previous),
+    // "Orders Created" is a pure count of orders placed, independent of
+    // revenue - head:true skips transferring any rows at all.
+    supabase.from("orders").select("*", { count: "exact", head: true }).gte("order_date", range.from).lte("order_date", range.to),
+    supabase.from("orders").select("*", { count: "exact", head: true }).gte("order_date", previous.from).lte("order_date", previous.to),
     // Snapshot, not date-ranged - orders has no delivered_at column, so this
     // intentionally reflects current state rather than approximating via
     // updated_at (which changes on any edit, not just delivery). Only the
@@ -112,19 +123,18 @@ export async function getDashboardStats(supabase: SupabaseClient, range: ReportD
     supabase.from("tasks").select("*", { count: "exact", head: true }).in("status", ["todo", "in_progress", "blocked"]),
   ])
 
-  if (revenueCurrentResult.error) throw revenueCurrentResult.error
-  if (revenuePreviousResult.error) throw revenuePreviousResult.error
+  if (ordersCreatedCurrentResult.error) throw ordersCreatedCurrentResult.error
+  if (ordersCreatedPreviousResult.error) throw ordersCreatedPreviousResult.error
   if (deliveredResult.error) throw deliveredResult.error
   if (productionCurrentResult.error) throw productionCurrentResult.error
   if (productionPreviousResult.error) throw productionPreviousResult.error
   if (openTasksResult.error) throw openTasksResult.error
 
-  const revenueCurrent = (revenueCurrentResult.data ?? []).reduce((sum, row) => sum + row.total, 0)
-  const revenuePrevious = (revenuePreviousResult.data ?? []).reduce((sum, row) => sum + row.total, 0)
-
   return {
-    totalRevenue: buildTrendKpi(revenueCurrent, revenuePrevious),
-    ordersCreated: buildTrendKpi(revenueCurrentResult.data?.length ?? 0, revenuePreviousResult.data?.length ?? 0),
+    totalRevenue: buildTrendKpi(revenueCurrent.revenue, revenuePrevious.revenue),
+    totalCOGS: buildTrendKpi(revenueCurrent.cogs, revenuePrevious.cogs),
+    grossProfit: buildTrendKpi(revenueCurrent.grossProfit, revenuePrevious.grossProfit),
+    ordersCreated: buildTrendKpi(ordersCreatedCurrentResult.count ?? 0, ordersCreatedPreviousResult.count ?? 0),
     ordersDelivered: { value: deliveredResult.count ?? 0 },
     productionJobs: buildTrendKpi(productionCurrentResult.count ?? 0, productionPreviousResult.count ?? 0),
     inventoryValue: { value: inventoryStats.totalInventoryValue },
@@ -134,24 +144,13 @@ export async function getDashboardStats(supabase: SupabaseClient, range: ReportD
   }
 }
 
+// Delegates entirely to the Finance module (see finance-sellers.ts's
+// getSellerRevenueTrend()) rather than re-deriving revenue from orders.total
+// here - this is the same function backing the Revenue Trend chart on both
+// Dashboard and Reports, so they can never show different numbers for the
+// same range.
 export async function getRevenueTrend(supabase: SupabaseClient, range: ReportDateRange): Promise<RevenuePoint[]> {
-  const { data, error } = await supabase
-    .from("orders")
-    .select("order_date, total")
-    .gte("order_date", range.from)
-    .lte("order_date", range.to)
-    .order("order_date", { ascending: true })
-
-  if (error) throw error
-
-  const byDate = new Map<string, number>()
-  for (const row of data ?? []) {
-    byDate.set(row.order_date, (byDate.get(row.order_date) ?? 0) + row.total)
-  }
-
-  return Array.from(byDate.entries())
-    .map(([date, total]) => ({ date, total }))
-    .sort((a, b) => a.date.localeCompare(b.date))
+  return getSellerRevenueTrend(supabase, range)
 }
 
 export async function getOrdersByStatus(supabase: SupabaseClient, range: ReportDateRange): Promise<OrdersByStatus[]> {
@@ -353,6 +352,8 @@ export async function exportReportCsv(supabase: SupabaseClient, range: ReportDat
     "",
     "Metric,Value",
     `Total Revenue,${stats.totalRevenue.value}`,
+    `Total COGS,${stats.totalCOGS.value}`,
+    `Gross Profit,${stats.grossProfit.value}`,
     `Orders Created,${stats.ordersCreated.value}`,
     `Orders Delivered (current),${stats.ordersDelivered.value}`,
     `Production Jobs,${stats.productionJobs.value}`,

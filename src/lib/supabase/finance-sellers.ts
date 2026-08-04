@@ -37,6 +37,63 @@ export async function getSellerDashboardStats(supabase: SupabaseClient): Promise
   }
 }
 
+export interface FinanceSellerRevenueStats {
+  revenue: number
+  cogs: number
+  grossProfit: number
+}
+
+export interface FinanceSellerRevenuePoint {
+  date: string
+  total: number
+}
+
+// The single source of Executive Dashboard / Reports financial KPIs - both
+// call this (see reports.ts's getDashboardStats()) instead of re-deriving
+// these sums themselves, so the two pages can never drift apart. grossProfit
+// sums the `profit` column directly rather than recomputing
+// selling_price - manufacturing_price in JS: profit is a DB GENERATED
+// column (migration 0024), so it is always already correct by construction.
+export async function getSellerRevenueStats(supabase: SupabaseClient, range: { from: string; to: string }): Promise<FinanceSellerRevenueStats> {
+  const { data, error } = await supabase
+    .from("finance_seller_invoices")
+    .select("selling_price, manufacturing_price, profit")
+    .gte("invoice_date", range.from)
+    .lte("invoice_date", range.to)
+
+  if (error) throw error
+
+  const rows = data ?? []
+  return {
+    revenue: rows.reduce((sum, row) => sum + row.selling_price, 0),
+    cogs: rows.reduce((sum, row) => sum + row.manufacturing_price, 0),
+    grossProfit: rows.reduce((sum, row) => sum + row.profit, 0),
+  }
+}
+
+// Backs the Revenue Trend chart on both Dashboard and Reports - same
+// selling_price source as getSellerRevenueStats() above, just grouped by day
+// instead of summed to one total.
+export async function getSellerRevenueTrend(supabase: SupabaseClient, range: { from: string; to: string }): Promise<FinanceSellerRevenuePoint[]> {
+  const { data, error } = await supabase
+    .from("finance_seller_invoices")
+    .select("invoice_date, selling_price")
+    .gte("invoice_date", range.from)
+    .lte("invoice_date", range.to)
+    .order("invoice_date", { ascending: true })
+
+  if (error) throw error
+
+  const byDate = new Map<string, number>()
+  for (const row of data ?? []) {
+    byDate.set(row.invoice_date, (byDate.get(row.invoice_date) ?? 0) + row.selling_price)
+  }
+
+  return Array.from(byDate.entries())
+    .map(([date, total]) => ({ date, total }))
+    .sort((a, b) => a.date.localeCompare(b.date))
+}
+
 export async function getSellerOptions(supabase: SupabaseClient): Promise<{ id: string; name: string }[]> {
   const { data, error } = await supabase.from("finance_sellers").select("id, name").order("name")
   if (error) throw error

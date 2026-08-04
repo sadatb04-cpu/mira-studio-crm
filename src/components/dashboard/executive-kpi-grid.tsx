@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { AlertTriangle, Briefcase, ClipboardList, DollarSign, Gem, Package, ShoppingBag, Users } from "lucide-react"
+import { AlertTriangle, Briefcase, ClipboardList, DollarSign, Gem, Package, Receipt, ShoppingBag, TrendingUp, Users } from "lucide-react"
 
 import { ReportSummaryCard } from "@/components/reports/report-summary-card"
 import type { DashboardStats } from "@/types/report"
@@ -20,6 +20,12 @@ export function ExecutiveKpiGrid({ stats, lowStockJewelryCount }: ExecutiveKpiGr
     <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
       <Link href="/reports" className={cardLinkClassName}>
         <ReportSummaryCard label="Revenue" kpi={stats.totalRevenue} icon={DollarSign} formatValue={formatCurrency} />
+      </Link>
+      <Link href="/finance/sellers" className={cardLinkClassName}>
+        <ReportSummaryCard label="COGS" kpi={stats.totalCOGS} icon={Receipt} formatValue={formatCurrency} />
+      </Link>
+      <Link href="/finance/sellers" className={cardLinkClassName}>
+        <ReportSummaryCard label="Gross Profit" kpi={stats.grossProfit} icon={TrendingUp} formatValue={formatCurrency} />
       </Link>
       <Link href="/orders" className={cardLinkClassName}>
         <ReportSummaryCard label="Orders" kpi={stats.ordersCreated} icon={ShoppingBag} />

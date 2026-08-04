@@ -69,6 +69,12 @@ export async function deleteSeller(id: string): Promise<FinanceActionState> {
   }
 
   revalidatePath("/finance/sellers")
+  // Cascades that seller's invoices too (see migration 0024's ON DELETE
+  // CASCADE), which changes Revenue/COGS/Gross Profit - see the comment on
+  // createSellerInvoice below for why Dashboard/Reports need an explicit
+  // revalidatePath here.
+  revalidatePath("/")
+  revalidatePath("/reports")
   return {}
 }
 
@@ -87,6 +93,14 @@ export async function createSellerInvoice(input: SellerInvoiceInput): Promise<Fi
   }
 
   revalidatePath(`/finance/sellers/${input.sellerId}`)
+  // Executive Dashboard ("/") and Reports both derive Revenue/COGS/Gross
+  // Profit from this same table (see reports.ts's getDashboardStats() ->
+  // finance-sellers.ts's getSellerRevenueStats()). Next's client Router
+  // Cache holds dynamic routes for 30s (next.config.ts), so without this
+  // those pages could keep showing stale totals for up to 30s after a
+  // seller invoice changes elsewhere - this makes the update immediate.
+  revalidatePath("/")
+  revalidatePath("/reports")
   return { id }
 }
 
@@ -104,6 +118,8 @@ export async function updateSellerInvoice(id: string, input: SellerInvoiceInput)
   }
 
   revalidatePath(`/finance/sellers/${input.sellerId}`)
+  revalidatePath("/")
+  revalidatePath("/reports")
   return {}
 }
 
@@ -118,6 +134,8 @@ export async function deleteSellerInvoice(id: string, sellerId: string): Promise
   }
 
   revalidatePath(`/finance/sellers/${sellerId}`)
+  revalidatePath("/")
+  revalidatePath("/reports")
   return {}
 }
 

@@ -63,7 +63,7 @@ export function RevenueChart({ points }: RevenueChartProps) {
   return (
     <SectionCard
       title="Revenue Trend"
-      description="Revenue from orders placed in the selected range."
+      description="Revenue from Seller invoices in the selected range."
       actions={
         <div className="flex items-center gap-1">
           {GRANULARITY_OPTIONS.map((option) => (
@@ -78,7 +78,7 @@ export function RevenueChart({ points }: RevenueChartProps) {
             </Button>
           ))}
           <Button asChild type="button" size="xs" variant="ghost">
-            <Link href="/orders">View Orders →</Link>
+            <Link href="/finance/sellers">View Sellers →</Link>
           </Button>
         </div>
       }
