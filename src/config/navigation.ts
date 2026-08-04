@@ -10,6 +10,7 @@ import {
   LineChart,
   Settings,
   Clock,
+  Wallet,
   LucideIcon,
 } from "lucide-react";
 
@@ -125,6 +126,15 @@ export const navigationItems: NavigationItem[] = [
     description: "Generate sales, production, and performance analytics.",
     isEnabled: true,
     permissionModule: "reports",
+  },
+  {
+    id: "finance",
+    label: "Finance",
+    href: "/finance",
+    icon: Wallet,
+    description: "Track manufacturing invoices, seller profit, and company expenses.",
+    isEnabled: true,
+    permissionModule: "finance",
   },
   {
     id: "settings",

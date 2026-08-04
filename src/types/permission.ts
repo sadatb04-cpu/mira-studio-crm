@@ -14,6 +14,7 @@ export const PERMISSION_MODULES = [
   "attendance",
   "reports",
   "settings",
+  "finance",
 ] as const
 export type PermissionModule = (typeof PERMISSION_MODULES)[number]
 
@@ -30,6 +31,7 @@ export const PERMISSION_MODULE_LABELS: Record<PermissionModule, string> = {
   attendance: "Attendance",
   reports: "Reports",
   settings: "Settings",
+  finance: "Finance",
 }
 
 export type ModuleAction = "view" | "create" | "edit" | "delete"
