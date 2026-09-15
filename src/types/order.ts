@@ -71,7 +71,8 @@ export interface OrderListItem {
   currency: string
   created_at: string
   customer: { full_name: string } | null
-  order_items: { count: number }[]
+  /** Same order_items.description field OrderDetail.productName is built from (see getOrderById) - not a new/duplicate field. */
+  order_items: { description: string; created_at: string }[]
   order_stones: { count: number }[]
 }
 

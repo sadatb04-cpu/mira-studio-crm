@@ -33,8 +33,27 @@ interface GetOrdersFilters {
 
 export const ORDERS_PAGE_SIZE = 25
 
+// order_items(description, created_at) backs the Orders list's "Product /
+// Item" column - the same order_items.description column getOrderById()
+// already treats as the order's product name (see its "productName" field
+// below), not a new/duplicate source of truth. created_at is fetched only
+// so results can be sorted client-side into "first item" order, matching
+// getOrderById's identical "PostgREST doesn't guarantee embedded-array
+// order" handling.
 const ORDER_COLUMNS =
-  "id, order_number, status, order_date, due_date, total, currency, created_at, order_items(count), order_stones(count)"
+  "id, order_number, status, order_date, due_date, total, currency, created_at, order_items(description, created_at), order_stones(count)"
+
+// Mirrors getOrderById()'s own explicit sort of order_items by created_at -
+// PostgREST doesn't guarantee embedded-array order, so both queries sort
+// client-side to agree on which item is "first" for a multi-item order.
+function withSortedOrderItems(order: OrderListItem): OrderListItem {
+  return {
+    ...order,
+    order_items: [...order.order_items].sort(
+      (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+    ),
+  }
+}
 
 export async function getOrders(supabase: SupabaseClient, filters: GetOrdersFilters = {}) {
   if (filters.search) {
@@ -70,7 +89,7 @@ export async function getOrders(supabase: SupabaseClient, filters: GetOrdersFilt
 
     const merged = new Map<string, OrderListItem>()
     for (const row of [...numberResult.data, ...customerResult.data] as unknown as OrderListItem[]) {
-      merged.set(row.id, row)
+      merged.set(row.id, withSortedOrderItems(row))
     }
 
     return Array.from(merged.values()).sort(
@@ -104,7 +123,7 @@ export async function getOrders(supabase: SupabaseClient, filters: GetOrdersFilt
   const { data, error } = await query
   if (error) throw error
 
-  return (data ?? []) as unknown as OrderListItem[]
+  return ((data ?? []) as unknown as OrderListItem[]).map(withSortedOrderItems)
 }
 
 // One head:true count per status, run in parallel, instead of fetching every

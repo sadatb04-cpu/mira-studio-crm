@@ -37,6 +37,17 @@ function formatDate(value: string) {
   return format(new Date(value), "MMM d, yyyy")
 }
 
+// order_items is already sorted "first item first" by getOrders() (see
+// orders.ts's withSortedOrderItems) - this just formats that into the
+// "Diamond Solitaire Ring" / "Diamond Solitaire Ring + 2 more" label from
+// the existing order_items.description field, no new data source involved.
+function productItemLabel(items: OrderListItem["order_items"]): string {
+  if (items.length === 0) return "—"
+
+  const extraCount = items.length - 1
+  return extraCount > 0 ? `${items[0].description} + ${extraCount} more` : items[0].description
+}
+
 interface OrdersTableProps {
   orders: OrderListItem[]
   /** Whether the initial fetch was truncated - omitted (or false) when a search is active, since search results already come back in full. */
@@ -81,7 +92,7 @@ export function OrdersTable({ orders: initialOrders, hasMore: initialHasMore = f
             <TableHead>Customer</TableHead>
             <TableHead>Status</TableHead>
             <TableHead>Items</TableHead>
-            <TableHead>Stones</TableHead>
+            <TableHead>Product / Item</TableHead>
             <TableHead>Order Date</TableHead>
             <TableHead>Due Date</TableHead>
             <TableHead className="text-right">Total</TableHead>
@@ -103,9 +114,9 @@ export function OrdersTable({ orders: initialOrders, hasMore: initialHasMore = f
               <TableCell>
                 <StatusBadge label={ORDER_STATUS_LABELS[order.status]} tone={STATUS_TONE[order.status]} />
               </TableCell>
-              <TableCell className="text-muted-foreground">{order.order_items[0]?.count ?? 0}</TableCell>
-              <TableCell className="text-muted-foreground">
-                {order.order_stones[0]?.count ?? 0} Stone{(order.order_stones[0]?.count ?? 0) === 1 ? "" : "s"}
+              <TableCell className="text-muted-foreground">{order.order_items.length}</TableCell>
+              <TableCell className="max-w-56 truncate text-muted-foreground" title={productItemLabel(order.order_items)}>
+                {productItemLabel(order.order_items)}
               </TableCell>
               <TableCell className="text-muted-foreground">{formatDate(order.order_date)}</TableCell>
               <TableCell className="text-muted-foreground">
