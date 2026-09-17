@@ -29,3 +29,40 @@ export const updateLeadStatusSchema = z.object({
 })
 
 export type UpdateLeadStatusInput = z.infer<typeof updateLeadStatusSchema>
+
+// ---------------------------------------------------------------------------
+// Bulk import - same "raw row, then re-validated normalized input" split
+// Orders uses (orderImportRowSchema / orderImportInputSchema). Only Name and
+// Phone reject a row; an invalid email is the one other reject reason
+// (matching Orders' "only missing customer name/order number, invalid
+// dates, invalid email... reject a row" rule) - an unrecognized Source
+// value never rejects a row, it's just left unset (see lead-import-config.ts's
+// matchByLabel).
+// ---------------------------------------------------------------------------
+
+const optionalImportEmail = z
+  .string()
+  .trim()
+  .optional()
+  .refine((value) => !value || z.email().safeParse(value).success, { error: "Enter a valid email address." })
+
+export const leadImportRowSchema = z.object({
+  fullName: z.string().trim().min(1, { error: "Name is required." }),
+  phone: z.string().trim().min(1, { error: "Phone / WhatsApp is required." }),
+  email: optionalImportEmail,
+  source: z.string().trim().optional(),
+  notes: z.string().trim().optional(),
+})
+
+export type LeadImportRowSchemaInput = z.infer<typeof leadImportRowSchema>
+
+// Server-side safety-net re-validation of the already-normalized
+// LeadImportInput the wizard sends to importLeadsChunk - same role as
+// orderImportInputSchema.safeParse(row.input) in importOrdersChunk.
+export const leadImportInputSchema = z.object({
+  fullName: z.string().trim().min(1),
+  phone: z.string().trim().min(1),
+  email: optionalImportEmail,
+  source: z.enum(LEAD_SOURCES).optional(),
+  notes: z.string().trim().optional(),
+})

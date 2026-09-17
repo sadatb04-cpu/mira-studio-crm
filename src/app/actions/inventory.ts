@@ -24,6 +24,7 @@ import type {
   InventoryImportSummary,
   InventoryItemFormInput,
 } from "@/types/inventory"
+import type { PermissionModule } from "@/types/permission"
 
 export interface InventoryActionState {
   error?: string
@@ -184,11 +185,18 @@ export interface FetchGoogleSheetResult {
 // is no OAuth/service-account flow here, matching the brief's "shared
 // Google Sheets link" scope. Fetched server-side to avoid a browser CORS
 // failure against docs.google.com.
-export async function fetchGoogleSheetCsv(url: string): Promise<FetchGoogleSheetResult> {
+//
+// `module` defaults to "inventory" to preserve the exact existing behavior
+// for every caller that doesn't pass one (Loose Diamonds/Jewelry/Orders) -
+// this is shared by the generalized ImportWizard (see import-wizard.tsx),
+// so a module whose users don't have inventory:create (e.g. Sales) needs to
+// pass its own module here or its Google Sheets import would be incorrectly
+// blocked regardless of that user's actual permissions.
+export async function fetchGoogleSheetCsv(url: string, module: PermissionModule = "inventory"): Promise<FetchGoogleSheetResult> {
   const supabase = await createClient()
 
   try {
-    await requireModulePermission(supabase, "inventory", "create")
+    await requireModulePermission(supabase, module, "create")
   } catch (error) {
     return { error: error instanceof Error ? error.message : "Not authorized." }
   }

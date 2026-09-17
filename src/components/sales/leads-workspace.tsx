@@ -1,8 +1,9 @@
 "use client"
 
-import { useRef, useState } from "react"
+import { useState } from "react"
 
 import { QuickAddLeadSheet } from "@/components/sales/quick-add-lead-sheet"
+import { LeadImportButton } from "@/components/sales/lead-import-button"
 import { LeadsTable } from "@/components/sales/leads-table"
 import type { LeadRow } from "@/components/sales/leads-table"
 import { createLead, loadMoreLeads, updateLeadStatus } from "@/app/actions/leads"
@@ -43,12 +44,43 @@ export function LeadsWorkspace({ initialLeads, initialHasMore, filters }: LeadsW
   // moment a Quick Add succeeds - the new lead is newer than the entire
   // paginated window, so it shifts every already-fetched row's position by
   // one, and the next "Load More" would silently re-request rows already
-  // shown (duplicate rows in the list). This ref is only ever advanced by a
-  // confirmed Load More page below - submitLead() never touches it, so
-  // inserting any number of new leads above the cursor (via this user's own
-  // Quick Add, or anyone else's, concurrently) can never invalidate it: the
-  // cursor is an absolute value tied to real data, not a position.
-  const oldestCreatedAtRef = useRef(initialLeads.at(-1)?.created_at ?? null)
+  // shown (duplicate rows in the list). Plain state, not a ref, since it
+  // now also needs updating during render (see the initialLeads-changed
+  // block below, where refs can't be written). Only ever advanced by a
+  // confirmed Load More page, or by that same block - submitLead() never
+  // touches it, so inserting any number of new leads above the cursor (via
+  // this user's own Quick Add, or anyone else's, concurrently) can never
+  // invalidate it: the cursor is an absolute value tied to real data, not a
+  // position.
+  const [oldestCreatedAt, setOldestCreatedAt] = useState(initialLeads.at(-1)?.created_at ?? null)
+
+  // Bulk Import is the one thing on this page that legitimately calls
+  // router.refresh() (see ImportWizard's handleFinish) - Quick Add
+  // deliberately never does, so without this, a completed import would
+  // update the server's data but never reach this already-mounted
+  // component (a useState lazy initializer only runs once; a changed
+  // initialLeads prop alone doesn't touch state that already exists).
+  // "Adjusting state when a prop changes" during render (not in an effect)
+  // is React's own documented pattern for this - same technique already
+  // used elsewhere in this app (e.g. FolderFormDialog's prevOpen check) -
+  // and avoids the extra, unnecessary render an effect-based version would
+  // cause. Only runs when initialLeads actually changes identity, which in
+  // practice only happens after that router.refresh(). Any row that isn't
+  // yet "saved" (a Quick Add still pending or errored) is preserved rather
+  // than overwritten, so a bulk import finishing mid Quick-Add-burst can
+  // never silently drop an in-flight submission - this is additive to
+  // Quick Add, not a change to how it works.
+  const [prevInitialLeads, setPrevInitialLeads] = useState(initialLeads)
+  if (initialLeads !== prevInitialLeads) {
+    setPrevInitialLeads(initialLeads)
+    setRows((current) => {
+      const unsettled = current.filter((row) => row.saveState !== "saved")
+      const fresh = initialLeads.map((lead) => ({ key: lead.id, lead, saveState: "saved" as const }))
+      return [...unsettled, ...fresh]
+    })
+    setHasMore(initialHasMore)
+    setOldestCreatedAt(initialLeads.at(-1)?.created_at ?? null)
+  }
 
   function submitLead(input: CreateLeadInput, retryKey?: string) {
     const key = retryKey ?? crypto.randomUUID()
@@ -100,14 +132,14 @@ export function LeadsWorkspace({ initialLeads, initialHasMore, filters }: LeadsW
   }
 
   function handleLoadMore() {
-    if (!oldestCreatedAtRef.current) return
+    if (!oldestCreatedAt) return
 
     setIsLoadingMore(true)
     setLoadMoreError(null)
 
     void (async () => {
       try {
-        const page = await loadMoreLeads(filters, oldestCreatedAtRef.current as string)
+        const page = await loadMoreLeads(filters, oldestCreatedAt)
 
         if (page.error || !page.leads) {
           setLoadMoreError(page.error ?? "Unable to load more leads.")
@@ -119,7 +151,7 @@ export function LeadsWorkspace({ initialLeads, initialHasMore, filters }: LeadsW
         // has actually been confirmed, so a failed attempt leaves the next
         // click retrying the exact same request.
         if (page.leads.length > 0) {
-          oldestCreatedAtRef.current = page.leads[page.leads.length - 1].created_at
+          setOldestCreatedAt(page.leads[page.leads.length - 1].created_at)
         }
         setRows((current) => [...current, ...page.leads!.map((lead) => ({ key: lead.id, lead, saveState: "saved" as const }))])
         setHasMore(page.hasMore ?? false)
@@ -136,7 +168,8 @@ export function LeadsWorkspace({ initialLeads, initialHasMore, filters }: LeadsW
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex justify-end">
+      <div className="flex justify-end gap-2">
+        <LeadImportButton />
         <QuickAddLeadSheet onSubmit={submitLead} />
       </div>
 

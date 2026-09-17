@@ -1,7 +1,8 @@
 import type { SupabaseClient } from "@supabase/supabase-js"
 
-import type { LeadListItem, LeadSource, LeadStatus } from "@/types/lead"
+import type { LeadImportInput, LeadListItem, LeadSource, LeadStatus } from "@/types/lead"
 import type { CreateLeadInput } from "@/lib/validations/lead"
+import type { DuplicateResolution, ImportDuplicateMatch, ImportRowResult } from "@/types/import"
 
 export const LEADS_PAGE_SIZE = 25
 
@@ -153,4 +154,169 @@ export async function updateLeadStatus(supabase: SupabaseClient, id: string, sta
     action: "status_changed",
     description: `Status changed from "${existing.status}" to "${status}".`,
   })
+}
+
+// ---------------------------------------------------------------------------
+// Bulk import
+// ---------------------------------------------------------------------------
+
+// Digits only - "555-123-4567", "(555) 123-4567", and "5551234567" must all
+// normalize to the same value for duplicate matching, matching Quick Add's
+// "don't reject messy real-world numbers with a strict regex" philosophy
+// (this just tolerates formatting differences, it doesn't validate shape).
+function normalizePhoneForMatch(value: string): string {
+  return value.replace(/\D/g, "")
+}
+
+export interface LeadDuplicateCandidate {
+  rowIndex: number
+  phone: string
+  email?: string
+}
+
+// Leads have no single natural key (unlike Loose Diamonds' report_number or
+// Orders' order_number), so this can't reuse inventory-shared.ts's
+// single-column findDuplicatesByKey() - "exact phone OR exact email" needs
+// an OR across two columns. Fetches id/full_name/phone/email for every lead
+// and normalizes both sides in JS (phone digits-only, email trimmed +
+// lowercased) - the same "fetch simple, normalize in JS" tradeoff
+// findDuplicatesByKey() already accepts for its own exact-match lookups,
+// since phone/email aren't stored pre-normalized and PostgREST can't apply
+// arbitrary normalization server-side without a generated column this phase
+// doesn't add.
+export async function findLeadDuplicates(
+  supabase: SupabaseClient,
+  candidates: LeadDuplicateCandidate[]
+): Promise<Map<number, ImportDuplicateMatch>> {
+  const { data, error } = await supabase.from("leads").select("id, full_name, phone, email")
+  if (error) throw error
+
+  const byPhone = new Map<string, ImportDuplicateMatch>()
+  const byEmail = new Map<string, ImportDuplicateMatch>()
+
+  for (const row of data ?? []) {
+    const match: ImportDuplicateMatch = { id: row.id, label: row.full_name }
+    const normalizedPhone = normalizePhoneForMatch(row.phone)
+    if (normalizedPhone) byPhone.set(normalizedPhone, match)
+    if (row.email) byEmail.set(row.email.trim().toLowerCase(), match)
+  }
+
+  const result = new Map<number, ImportDuplicateMatch>()
+  for (const candidate of candidates) {
+    const normalizedPhone = normalizePhoneForMatch(candidate.phone)
+    const normalizedEmail = candidate.email?.trim().toLowerCase()
+    const match = (normalizedPhone && byPhone.get(normalizedPhone)) || (normalizedEmail && byEmail.get(normalizedEmail))
+    if (match) result.set(candidate.rowIndex, match)
+  }
+
+  return result
+}
+
+// Deliberately never sets status/priority/assigned_to - LeadImportInput has
+// no such fields, so an imported row always gets the DB's defaults ('new'/
+// 'medium'), exactly matching Quick Add and the "raw capture first,
+// qualification later" rule.
+export async function createLeadFromImportRow(supabase: SupabaseClient, input: LeadImportInput): Promise<string> {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  const { data, error } = await supabase
+    .from("leads")
+    .insert({
+      full_name: input.fullName,
+      phone: input.phone,
+      email: input.email || null,
+      source: input.source || null,
+      notes: input.notes || null,
+      created_by: user?.id ?? null,
+    })
+    .select("id")
+    .single()
+
+  if (error) throw error
+
+  await logLeadActivity(supabase, { entity_id: data.id, action: "imported", description: `Imported lead "${input.fullName}".` })
+
+  return data.id
+}
+
+// Only contact/context fields are touched - status/priority/assigned_to/
+// interested_product/requirements_notes are never modified by an import
+// update, so a lead already in progress can never be silently reset back to
+// square one by re-importing a spreadsheet.
+async function updateLeadFromImportRow(supabase: SupabaseClient, id: string, input: LeadImportInput): Promise<void> {
+  const { error } = await supabase
+    .from("leads")
+    .update({
+      full_name: input.fullName,
+      phone: input.phone,
+      email: input.email || null,
+      source: input.source || null,
+      notes: input.notes || null,
+    })
+    .eq("id", id)
+
+  if (error) throw error
+
+  await logLeadActivity(supabase, {
+    entity_id: id,
+    action: "updated_via_import",
+    description: `Updated from import: "${input.fullName}".`,
+  })
+}
+
+export interface ResolvedLeadImportRow {
+  rowIndex: number
+  input: LeadImportInput
+  duplicateId: string | null
+  resolution: DuplicateResolution
+}
+
+// Mirrors bulkImportOrders()'s shape exactly, with one difference: Orders
+// unconditionally skips every duplicate (no natural key may ever be
+// overwritten by an import), whereas Leads allow "update" - a lead has no
+// immutable business document number, so refreshing an existing lead's
+// contact details from a corrected spreadsheet is a legitimate, explicit
+// (never automatic) choice made in the wizard's preview step.
+export async function bulkImportLeads(supabase: SupabaseClient, rows: ResolvedLeadImportRow[]): Promise<ImportRowResult[]> {
+  const results: ImportRowResult[] = []
+
+  for (const row of rows) {
+    if (row.duplicateId) {
+      if (row.resolution === "update") {
+        try {
+          await updateLeadFromImportRow(supabase, row.duplicateId, row.input)
+          results.push({ rowIndex: row.rowIndex, status: "updated" })
+        } catch (error) {
+          results.push({
+            rowIndex: row.rowIndex,
+            status: "error",
+            message: error instanceof Error ? error.message : "Unable to update this lead.",
+          })
+        }
+        continue
+      }
+
+      // "skip" is the only other resolution the wizard offers here
+      // (allowCreateDuplicate is false, so "create_duplicate" is never
+      // sent by the UI) - skip is also the safe fallback for any
+      // unrecognized resolution value.
+      results.push({ rowIndex: row.rowIndex, status: "skipped", message: "Already exists" })
+      continue
+    }
+
+    try {
+      const id = await createLeadFromImportRow(supabase, row.input)
+      results.push({ rowIndex: row.rowIndex, status: "created", message: id })
+    } catch (error) {
+      results.push({
+        rowIndex: row.rowIndex,
+        status: "error",
+        message: error instanceof Error ? error.message : "Unable to import this row.",
+      })
+    }
+  }
+
+  return results
 }

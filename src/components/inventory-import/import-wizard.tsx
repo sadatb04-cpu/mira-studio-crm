@@ -30,6 +30,7 @@ import type { ColumnMapping } from "@/lib/import/column-mapping"
 import { fetchGoogleSheetCsv } from "@/app/actions/inventory"
 import { IMPORT_SOURCE_TYPES, IMPORT_SOURCE_TYPE_LABELS } from "@/types/import"
 import type { DuplicateResolution, ImportDuplicateMatch, ImportRowResult, ImportSourceType, ImportSummary } from "@/types/import"
+import type { PermissionModule } from "@/types/permission"
 
 const SOURCE_ICONS: Record<ImportSourceType, typeof FileSpreadsheet> = {
   xlsx: FileSpreadsheet,
@@ -63,6 +64,13 @@ export interface ImportWizardConfig<TField extends string, TInput extends object
   fieldLabels: Record<TField, string>
   fieldAliases: Record<TField, string[]>
   requiredFields: TField[]
+  // Which module's permission this import checks for its Google Sheets
+  // fetch (see fetchGoogleSheetCsv in actions/inventory.ts). Optional and
+  // defaults to "inventory" - every config before Leads relied on that
+  // default implicitly; only set this when the importing module differs
+  // (e.g. Sales' lead-import-config.ts sets "sales", so a user with sales:
+  // create but no inventory:create isn't incorrectly blocked).
+  permissionModule?: PermissionModule
   // Allowing "create a duplicate anyway" only makes sense for a category
   // whose unique key is an assigned code (SKU) rather than a real-world
   // natural key (a diamond's Report Number) - see loose-diamonds config.
@@ -198,7 +206,7 @@ export function ImportWizard<TField extends string, TInput extends object>({
     setParseError(null)
     setSourceName(googleSheetUrl)
 
-    const result = await fetchGoogleSheetCsv(googleSheetUrl.trim())
+    const result = await fetchGoogleSheetCsv(googleSheetUrl.trim(), config.permissionModule)
 
     if (result.error || !result.csv) {
       setIsParsing(false)

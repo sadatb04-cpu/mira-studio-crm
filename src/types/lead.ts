@@ -64,3 +64,48 @@ export interface LeadListItem {
   status: LeadStatus
   created_at: string
 }
+
+// ---------------------------------------------------------------------------
+// Bulk import - reuses the same generalized ImportWizardConfig every other
+// category (Loose Diamonds, Jewelry, Orders) already uses. Mirrors Orders'
+// ORDER_IMPORT_* shape exactly, including the camelCase field names (import
+// input shapes use camelCase everywhere in this app; only the Quick Add/
+// Supabase-column-matching CreateLeadInput uses snake_case).
+//
+// Deliberately only the same 5 fields Quick Add collects - no
+// interested_product/requirements_notes/status/priority target field exists
+// here, so an imported spreadsheet can never set qualification data or
+// override status/priority even if a column happens to be named that.
+// ---------------------------------------------------------------------------
+
+export const LEAD_IMPORT_TARGET_FIELDS = ["fullName", "phone", "email", "source", "notes"] as const
+export type LeadImportField = (typeof LEAD_IMPORT_TARGET_FIELDS)[number]
+
+export const LEAD_IMPORT_FIELD_LABELS: Record<LeadImportField, string> = {
+  fullName: "Name",
+  phone: "Phone / WhatsApp",
+  email: "Email",
+  source: "Source",
+  notes: "Notes",
+}
+
+export const LEAD_IMPORT_REQUIRED_FIELDS: LeadImportField[] = ["fullName", "phone"]
+
+// Header names the auto-mapper recognizes (lowercased, punctuation-
+// insensitive - see lib/import/column-mapping.ts), per the approved column
+// list.
+export const LEAD_IMPORT_FIELD_ALIASES: Record<LeadImportField, string[]> = {
+  fullName: ["name", "full name", "customer name", "lead name"],
+  phone: ["phone", "phone number", "mobile", "mobile number", "whatsapp", "whatsapp number"],
+  email: ["email", "email address", "e mail"],
+  source: ["source", "lead source"],
+  notes: ["notes", "comments", "remarks", "requirements"],
+}
+
+export interface LeadImportInput {
+  fullName: string
+  phone: string
+  email?: string
+  source?: LeadSource
+  notes?: string
+}
