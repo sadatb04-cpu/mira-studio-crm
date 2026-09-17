@@ -11,6 +11,7 @@ import {
   Settings,
   Clock,
   Wallet,
+  UserPlus,
   LucideIcon,
 } from "lucide-react";
 
@@ -45,6 +46,15 @@ export const navigationItems: NavigationItem[] = [
     description: "Main dashboard containing key performance indicators and summaries.",
     isEnabled: true,
     permissionModule: "dashboard",
+  },
+  {
+    id: "sales",
+    label: "Sales",
+    href: "/sales",
+    icon: UserPlus,
+    description: "Capture and manage leads before they become customers.",
+    isEnabled: true,
+    permissionModule: "sales",
   },
   {
     id: "orders",

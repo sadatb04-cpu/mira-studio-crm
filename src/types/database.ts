@@ -55,6 +55,21 @@ export type Database = {
           },
         ]
       }
+      attendance_reconciliation_state: {
+        Row: {
+          id: boolean
+          last_run_at: string
+        }
+        Insert: {
+          id?: boolean
+          last_run_at?: string
+        }
+        Update: {
+          id?: boolean
+          last_run_at?: string
+        }
+        Relationships: []
+      }
       attendance_records: {
         Row: {
           check_in: string | null
@@ -440,6 +455,261 @@ export type Database = {
           },
         ]
       }
+      finance_expenses: {
+        Row: {
+          amount: number
+          category: Database["public"]["Enums"]["finance_expense_category"]
+          created_at: string
+          created_by: string | null
+          expense_date: string
+          file_name: string | null
+          file_size: number | null
+          file_url: string | null
+          google_sheet_url: string | null
+          id: string
+          mime_type: string | null
+          notes: string | null
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          category: Database["public"]["Enums"]["finance_expense_category"]
+          created_at?: string
+          created_by?: string | null
+          expense_date: string
+          file_name?: string | null
+          file_size?: number | null
+          file_url?: string | null
+          google_sheet_url?: string | null
+          id?: string
+          mime_type?: string | null
+          notes?: string | null
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          category?: Database["public"]["Enums"]["finance_expense_category"]
+          created_at?: string
+          created_by?: string | null
+          expense_date?: string
+          file_name?: string | null
+          file_size?: number | null
+          file_url?: string | null
+          google_sheet_url?: string | null
+          id?: string
+          mime_type?: string | null
+          notes?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "finance_expenses_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      finance_manufacturer_invoices: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          file_name: string | null
+          file_size: number | null
+          file_url: string | null
+          google_sheet_url: string | null
+          id: string
+          invoice_date: string
+          manufacturer_id: string
+          manufacturing_price: number
+          mime_type: string | null
+          notes: string | null
+          product_type: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          file_name?: string | null
+          file_size?: number | null
+          file_url?: string | null
+          google_sheet_url?: string | null
+          id?: string
+          invoice_date: string
+          manufacturer_id: string
+          manufacturing_price: number
+          mime_type?: string | null
+          notes?: string | null
+          product_type: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          file_name?: string | null
+          file_size?: number | null
+          file_url?: string | null
+          google_sheet_url?: string | null
+          id?: string
+          invoice_date?: string
+          manufacturer_id?: string
+          manufacturing_price?: number
+          mime_type?: string | null
+          notes?: string | null
+          product_type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "finance_manufacturer_invoices_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "finance_manufacturer_invoices_manufacturer_id_fkey"
+            columns: ["manufacturer_id"]
+            isOneToOne: false
+            referencedRelation: "finance_manufacturers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      finance_manufacturers: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "finance_manufacturers_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      finance_seller_invoices: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          file_name: string | null
+          file_size: number | null
+          file_url: string | null
+          google_sheet_url: string | null
+          id: string
+          invoice_date: string
+          manufacturing_price: number
+          mime_type: string | null
+          product_name: string
+          profit: number | null
+          seller_id: string
+          selling_price: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          file_name?: string | null
+          file_size?: number | null
+          file_url?: string | null
+          google_sheet_url?: string | null
+          id?: string
+          invoice_date: string
+          manufacturing_price: number
+          mime_type?: string | null
+          product_name: string
+          profit?: number | null
+          seller_id: string
+          selling_price: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          file_name?: string | null
+          file_size?: number | null
+          file_url?: string | null
+          google_sheet_url?: string | null
+          id?: string
+          invoice_date?: string
+          manufacturing_price?: number
+          mime_type?: string | null
+          product_name?: string
+          profit?: number | null
+          seller_id?: string
+          selling_price?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "finance_seller_invoices_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "finance_seller_invoices_seller_id_fkey"
+            columns: ["seller_id"]
+            isOneToOne: false
+            referencedRelation: "finance_sellers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      finance_sellers: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "finance_sellers_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       inventory_import_batches: {
         Row: {
           category: string
@@ -800,6 +1070,88 @@ export type Database = {
           },
         ]
       }
+      leads: {
+        Row: {
+          assigned_to: string | null
+          converted_at: string | null
+          converted_customer_id: string | null
+          created_at: string
+          created_by: string | null
+          email: string | null
+          full_name: string
+          id: string
+          interested_product: string | null
+          next_follow_up_at: string | null
+          notes: string | null
+          phone: string
+          priority: Database["public"]["Enums"]["lead_priority"]
+          requirements_notes: string | null
+          source: Database["public"]["Enums"]["lead_source"] | null
+          status: Database["public"]["Enums"]["lead_status"]
+          updated_at: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          converted_at?: string | null
+          converted_customer_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          email?: string | null
+          full_name: string
+          id?: string
+          interested_product?: string | null
+          next_follow_up_at?: string | null
+          notes?: string | null
+          phone: string
+          priority?: Database["public"]["Enums"]["lead_priority"]
+          requirements_notes?: string | null
+          source?: Database["public"]["Enums"]["lead_source"] | null
+          status?: Database["public"]["Enums"]["lead_status"]
+          updated_at?: string
+        }
+        Update: {
+          assigned_to?: string | null
+          converted_at?: string | null
+          converted_customer_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          email?: string | null
+          full_name?: string
+          id?: string
+          interested_product?: string | null
+          next_follow_up_at?: string | null
+          notes?: string | null
+          phone?: string
+          priority?: Database["public"]["Enums"]["lead_priority"]
+          requirements_notes?: string | null
+          source?: Database["public"]["Enums"]["lead_source"] | null
+          status?: Database["public"]["Enums"]["lead_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leads_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leads_converted_customer_id_fkey"
+            columns: ["converted_customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leads_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       loose_diamonds: {
         Row: {
           carat: number
@@ -819,7 +1171,7 @@ export type Database = {
           notes: string | null
           polish: string | null
           report_number: string
-          selling_price: number
+          selling_price: number | null
           shape: string | null
           status: Database["public"]["Enums"]["loose_diamond_status"]
           supplier_id: string | null
@@ -844,7 +1196,7 @@ export type Database = {
           notes?: string | null
           polish?: string | null
           report_number: string
-          selling_price?: number
+          selling_price?: number | null
           shape?: string | null
           status?: Database["public"]["Enums"]["loose_diamond_status"]
           supplier_id?: string | null
@@ -869,7 +1221,7 @@ export type Database = {
           notes?: string | null
           polish?: string | null
           report_number?: string
-          selling_price?: number
+          selling_price?: number | null
           shape?: string | null
           status?: Database["public"]["Enums"]["loose_diamond_status"]
           supplier_id?: string | null
@@ -1184,15 +1536,20 @@ export type Database = {
       }
       orders: {
         Row: {
+          advance_paid: number
+          balance_due: number | null
           created_at: string
           created_by: string | null
           currency: string
           customer_id: string
+          delivery_date: string | null
           due_date: string | null
           id: string
           notes: string | null
           order_date: string
           order_number: string
+          priority: Database["public"]["Enums"]["order_priority"]
+          sales_person: string | null
           shipping_cost: number
           status: Database["public"]["Enums"]["order_status"]
           subtotal: number
@@ -1201,15 +1558,20 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          advance_paid?: number
+          balance_due?: number | null
           created_at?: string
           created_by?: string | null
           currency?: string
           customer_id: string
+          delivery_date?: string | null
           due_date?: string | null
           id?: string
           notes?: string | null
           order_date?: string
           order_number: string
+          priority?: Database["public"]["Enums"]["order_priority"]
+          sales_person?: string | null
           shipping_cost?: number
           status?: Database["public"]["Enums"]["order_status"]
           subtotal?: number
@@ -1218,15 +1580,20 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          advance_paid?: number
+          balance_due?: number | null
           created_at?: string
           created_by?: string | null
           currency?: string
           customer_id?: string
+          delivery_date?: string | null
           due_date?: string | null
           id?: string
           notes?: string | null
           order_date?: string
           order_number?: string
+          priority?: Database["public"]["Enums"]["order_priority"]
+          sales_person?: string | null
           shipping_cost?: number
           status?: Database["public"]["Enums"]["order_status"]
           subtotal?: number
@@ -1683,6 +2050,12 @@ export type Database = {
         | "attendance_record"
         | "loose_diamond"
         | "jewelry_item"
+        | "finance_manufacturer"
+        | "finance_seller"
+        | "finance_manufacturer_invoice"
+        | "finance_seller_invoice"
+        | "finance_expense"
+        | "lead"
       activity_status: "pending" | "in_progress" | "completed"
       attendance_status:
         | "working"
@@ -1706,6 +2079,15 @@ export type Database = {
         | "manufacturer_payment"
         | "employee_information"
       employment_status: "active" | "on_leave" | "terminated"
+      finance_expense_category:
+        | "salaries"
+        | "office_rent"
+        | "internet"
+        | "electricity"
+        | "marketing"
+        | "software"
+        | "shipping"
+        | "miscellaneous"
       inventory_category:
         | "gold"
         | "lab_diamond"
@@ -1729,6 +2111,26 @@ export type Database = {
         | "return"
         | "finished_goods"
         | "sale"
+      lead_priority: "low" | "medium" | "high"
+      lead_source:
+        | "instagram"
+        | "facebook"
+        | "whatsapp"
+        | "website"
+        | "google"
+        | "referral"
+        | "email"
+        | "cold_outreach"
+        | "import"
+        | "other"
+      lead_status:
+        | "new"
+        | "contacted"
+        | "qualified"
+        | "proposal_sent"
+        | "won"
+        | "lost"
+        | "unqualified"
       loose_diamond_status: "available" | "reserved" | "sold" | "on_memo"
       notification_type:
         | "task_assigned"
@@ -1737,6 +2139,7 @@ export type Database = {
         | "low_stock"
         | "document_uploaded"
         | "system"
+      order_priority: "low" | "normal" | "high" | "urgent"
       order_status:
         | "draft"
         | "confirmed"
@@ -1761,6 +2164,8 @@ export type Database = {
         | "attendance"
         | "reports"
         | "settings"
+        | "finance"
+        | "sales"
       production_job_status:
         | "queued"
         | "in_progress"
@@ -1842,12 +2247,12 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1871,11 +2276,11 @@ export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1896,11 +2301,11 @@ export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1921,11 +2326,11 @@ export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1938,11 +2343,11 @@ export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
+    : never) = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1975,6 +2380,12 @@ export const Constants = {
         "attendance_record",
         "loose_diamond",
         "jewelry_item",
+        "finance_manufacturer",
+        "finance_seller",
+        "finance_manufacturer_invoice",
+        "finance_seller_invoice",
+        "finance_expense",
+        "lead",
       ],
       activity_status: ["pending", "in_progress", "completed"],
       attendance_status: [
@@ -2002,6 +2413,16 @@ export const Constants = {
         "employee_information",
       ],
       employment_status: ["active", "on_leave", "terminated"],
+      finance_expense_category: [
+        "salaries",
+        "office_rent",
+        "internet",
+        "electricity",
+        "marketing",
+        "software",
+        "shipping",
+        "miscellaneous",
+      ],
       inventory_category: [
         "gold",
         "lab_diamond",
@@ -2028,6 +2449,28 @@ export const Constants = {
         "finished_goods",
         "sale",
       ],
+      lead_priority: ["low", "medium", "high"],
+      lead_source: [
+        "instagram",
+        "facebook",
+        "whatsapp",
+        "website",
+        "google",
+        "referral",
+        "email",
+        "cold_outreach",
+        "import",
+        "other",
+      ],
+      lead_status: [
+        "new",
+        "contacted",
+        "qualified",
+        "proposal_sent",
+        "won",
+        "lost",
+        "unqualified",
+      ],
       loose_diamond_status: ["available", "reserved", "sold", "on_memo"],
       notification_type: [
         "task_assigned",
@@ -2037,6 +2480,7 @@ export const Constants = {
         "document_uploaded",
         "system",
       ],
+      order_priority: ["low", "normal", "high", "urgent"],
       order_status: [
         "draft",
         "confirmed",
@@ -2062,6 +2506,8 @@ export const Constants = {
         "attendance",
         "reports",
         "settings",
+        "finance",
+        "sales",
       ],
       production_job_status: [
         "queued",

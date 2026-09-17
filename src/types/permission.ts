@@ -15,6 +15,7 @@ export const PERMISSION_MODULES = [
   "reports",
   "settings",
   "finance",
+  "sales",
 ] as const
 export type PermissionModule = (typeof PERMISSION_MODULES)[number]
 
@@ -32,6 +33,7 @@ export const PERMISSION_MODULE_LABELS: Record<PermissionModule, string> = {
   reports: "Reports",
   settings: "Settings",
   finance: "Finance",
+  sales: "Sales",
 }
 
 export type ModuleAction = "view" | "create" | "edit" | "delete"
@@ -106,7 +108,7 @@ export const ROLE_TEMPLATES: RoleTemplate[] = [
     key: "sales",
     label: "Sales",
     modulePermissions: modulesFor(
-      ["dashboard", "orders", "customers", "quotations", "tasks", "documents", "attendance"],
+      ["dashboard", "sales", "orders", "customers", "quotations", "tasks", "documents", "attendance"],
       STANDARD_ACCESS
     ),
     special: ["send_quotation", "approve_quotation", "view_financial_pricing"],
